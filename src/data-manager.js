@@ -241,9 +241,9 @@ class DataManager {
         if (targetId) {
           setSourceStatusOpts.targetId = targetId;
         }
-        
+
         this.store.commit('setSourceStatus', setSourceStatusOpts);
-        
+
 
         // TODO do this for all targets
         switch(type) {
@@ -512,19 +512,19 @@ class DataManager {
 
   /* GEOCODING */
   geocode(input, category) {
-    // console.log('data-manager geocode is running, input:', input, 'category:', category);
-    if (category === 'address') {
-      const didGeocode = this.didGeocode.bind(this);
-      return this.clients.geocode.fetch(input).then(didGeocode);
-    } else if (category === 'owner') {
-      // console.log('category is owner');
-      const didOwnerSearch = this.didOwnerSearch.bind(this);
-      return this.clients.ownerSearch.fetch(input).then(didOwnerSearch);
-    } else if (category == null) {
-      // console.log('no category');
-      const didTryGeocode = this.didTryGeocode.bind(this);
-      const test = this.clients.geocode.fetch(input).then(didTryGeocode);
-    }
+    console.log('data-manager geocode is running, input:', input, 'category:', category);
+    // if (category === 'address') {
+      // const didGeocode = this.didGeocode.bind(this);
+      return this.clients.geocode.fetch(input)//.then(didGeocode);
+    // } else if (category === 'owner') {
+    //   // console.log('category is owner');
+    //   const didOwnerSearch = this.didOwnerSearch.bind(this);
+    //   return this.clients.ownerSearch.fetch(input).then(didOwnerSearch);
+    // } else if (category == null) {
+    //   // console.log('no category');
+    //   const didTryGeocode = this.didTryGeocode.bind(this);
+    //   const test = this.clients.geocode.fetch(input).then(didTryGeocode);
+    // }
   }
 
   didOwnerSearch() {
@@ -560,162 +560,162 @@ class DataManager {
     }
   }
 
-  didGeocode(feature) {
-    let geocodeZoom = 19;
-    if (this.config.map.geocodeZoom) {
-      geocodeZoom = this.config.map.geocodeZoom;
-    }
-    console.log('DataManager.didGeocode:', feature, 'geocodeZoom:', geocodeZoom);
-    this.controller.router.didGeocode();
-    if (!this.config.parcels) {
-      if (this.store.state.map) {
-        this.store.commit('setMapCenter', feature.geometry.coordinates);
-        this.store.commit('setMapZoom', geocodeZoom);
-      }
-      return
-    }
-
-    const activeParcelLayer = this.store.state.activeParcelLayer;
-    const lastSearchMethod = this.store.state.lastSearchMethod;
-    const configForActiveParcelLayer = this.config.parcels[activeParcelLayer];
-    // // const multipleAllowed = configForParcelLayer.multipleAllowed;
-    // const geocodeField = configForParcelLayer.geocodeField;
-    const parcelLayers = Object.keys(this.config.parcels || {});
-    const otherParcelLayers = Object.keys(this.config.parcels || {});
-    otherParcelLayers.splice(otherParcelLayers.indexOf(activeParcelLayer), 1);
-    // console.log('didGeocode - activeParcelLayer:', activeParcelLayer, 'parcelLayers:', parcelLayers, 'otherParcelLayers:', otherParcelLayers);
-
-    // if it is a dor parcel query, and the geocode fails, coordinates can still be used
-    // to get dor parcels which are not in ais
-    // set coords to the ais coords OR the click if there is no ais result
-    let coords, lat, lng, latlng;
-    // if geocode fails
-    if (!feature) {
-      console.log('didGeocode - no geom');
-      if (lastSearchMethod === 'reverseGeocode') {
-        const clickCoords = this.store.state.clickCoords;
-        coords = [clickCoords.lng, clickCoords.lat];
-        [lng, lat] = coords;
-        latlng = L.latLng(lat, lng);
-      }
-    // if geocode succeeds
-    } else {
-      // console.log('didGeocode - GEOM', feature);
-      coords = feature.geometry.coordinates;
-      [lng, lat] = coords;
-      latlng = L.latLng(lat, lng);
-    }
-
-    // if (coords) {
-    //   const [lng, lat] = coords;
-    //   const latlng = L.latLng(lat, lng);
-    // }
-
-    // all of this happens whether geocode failed or succeeded
-    // search box or onload - get parcels by id
-    // (unless it fails and you are allowed to get them by LatLng on failure)
-    if (lastSearchMethod === 'geocode') {
-      if (feature) {
-        // console.log('didGeocode lastSearchMethod:', lastSearchMethod, '- attempting to get all parcel layers:', parcelLayers, ' by ID');
-        // loop through the parcels, and get them by their ids
-        for (let parcelLayer of parcelLayers) {
-          const configForParcelLayer = this.config.parcels[parcelLayer];
-          const parcelIdInGeocoder = configForParcelLayer.parcelIdInGeocoder
-          const parcelId = feature.properties[parcelIdInGeocoder];
-          if (parcelId && parcelId.length > 0) {
-            this.getParcelsById(parcelId, parcelLayer);
-          } else {
-            if (configForParcelLayer.getByLatLngIfIdFails) {
-              // console.log(parcelLayer, 'Id failed - had to get by LatLng')
-              console.log('in if lastSearchMethod === geocode, parcelLayer:', parcelLayer);
-              this.getParcelsByLatLng(latlng, parcelLayer);
-            }
-          }
-        }
-      }
-
-    // map-click - get pwd and dor parcels (whichever has not already been found) by latlng
-    // this is needed because it will not automatically get the dor parcels in case it does not find a pwd parcel
-    // and vice versa
-    } else if (lastSearchMethod === 'reverseGeocode') {
-      if (feature) {
-        // console.log('didGeocode lastSearchMethod:', lastSearchMethod, 'feature', feature, '- getting other parcel layers by id or latlng')
-        for (let otherParcelLayer of otherParcelLayers) {
-          const configForOtherParcelLayer = this.config.parcels[otherParcelLayer];
-          const parcelIdInGeocoder = configForOtherParcelLayer.parcelIdInGeocoder
-          const parcelId = feature.properties[parcelIdInGeocoder];
-          if (parcelId && parcelId.length > 0) {
-            this.getParcelsById(parcelId, otherParcelLayer);
-          } else {
-            if (configForOtherParcelLayer.getByLatLngIfIdFails) {
-              console.log('in if lastSearchMethod === reverseGeocode, otherParcelLayer:', otherParcelLayer, 'Id failed - had to get by LatLng')
-              this.getParcelsByLatLng(latlng, otherParcelLayer);
-            }
-          }
-        }
-      } else {
-        // console.log('didGeocode lastSearchMethod:', lastSearchMethod, 'NO feature', feature)
-        const geocodeFailAttemptParcel = configForActiveParcelLayer.geocodeFailAttemptParcel
-        if (geocodeFailAttemptParcel) {
-          // console.log('ran ais on a dor parcel and got no response - should try pwd parcel?', geocodeFailAttemptParcel);
-          const otherParcel = this.store.state.parcels[geocodeFailAttemptParcel];
-          // console.log('otherParcel:', otherParcel);
-          if (otherParcel) {
-            const configForOtherParcelLayer = this.config.parcels[geocodeFailAttemptParcel];
-            const geocodeField = configForOtherParcelLayer.geocodeField;
-            // console.log('running ais again on the pwd parcel', otherParcel.properties[geocodeField]);
-            this.store.commit('setLastSearchMethod', 'reverseGeocode-secondAttempt')
-            this.geocode(otherParcel.properties[geocodeField]);
-          }
-        }
-      }
-    }
-
-    // console.log('in didGeocode, activeTopicConfig:', this.activeTopicConfig());
-    const activeTopicConfig = this.activeTopicConfig();
-    // console.log('activeTopicConfig.zoomToShape:', activeTopicConfig.zoomToShape);
-    // const geocodeData = this.store.state.geocode.data || null;
-    // const geocodeProperties = geocodeData.properties || null;
-    // const newShape = geocodeProperties.opa_account_num || null;
-
-    // only recenter the map on geocode
-    if (lastSearchMethod === 'geocode' && this.store.state.geocode.status !== 'error') {
-      if (!activeTopicConfig.zoomToShape) {
-        // console.log('NO ZOOM TO SHAPE - NOW IT SHOULD NOT BE ZOOMING TO THE SHAPE ON GEOCODE');
-        if (this.store.state.map) {
-          let geocodeZoom = 19;
-          if (this.config.map.geocodeZoom) {
-            geocodeZoom = this.config.map.geocodeZoom;
-          }
-          this.store.commit('setMapCenter', coords);
-          this.store.commit('setMapZoom', geocodeZoom);
-        }
-      } else {
-        // console.log('ZOOM TO SHAPE - NOW IT SHOULD BE ZOOMING TO THE SHAPE ON GEOCODE');
-        // this.store.commit('setMapBoundsBasedOnShape', newShape);
-      }
-
-    } else if (activeTopicConfig.zoomToShape && lastSearchMethod === 'reverseGeocode' && this.store.state.geocode.status !== 'error') {
-      // console.log('ZOOM TO SHAPE - NOW IT SHOULD BE ZOOMING TO THE SHAPE ON REVERSE GEOCODE');
-      // this.store.commit('setMapBoundsBasedOnShape', newShape);
-    }
-
-    // reset data only when not a rev geocode second attempt
-    if (lastSearchMethod !== 'reverseGeocode-secondAttempt') {
-      this.resetData();
-    }
-
-    // as long as it is not an intersection, fetch new data
-    if (feature) {
-      if (feature.street_address) {
-        return;
-      } else if (feature.properties.street_address) {
-        this.fetchData();
-      }
-    } else {
-      this.fetchData();
-    }
-  } // end didGeocode
+  // didGeocode(feature) {
+  //   let geocodeZoom = 19;
+  //   if (this.config.map.geocodeZoom) {
+  //     geocodeZoom = this.config.map.geocodeZoom;
+  //   }
+  //   console.log('DataManager.didGeocode:', feature, 'geocodeZoom:', geocodeZoom);
+  //   this.controller.router.didGeocode();
+  //   if (!this.config.parcels) {
+  //     if (this.store.state.map) {
+  //       this.store.commit('setMapCenter', feature.geometry.coordinates);
+  //       this.store.commit('setMapZoom', geocodeZoom);
+  //     }
+  //     return
+  //   }
+  //
+  //   const activeParcelLayer = this.store.state.activeParcelLayer;
+  //   const lastSearchMethod = this.store.state.lastSearchMethod;
+  //   const configForActiveParcelLayer = this.config.parcels[activeParcelLayer];
+  //   // // const multipleAllowed = configForParcelLayer.multipleAllowed;
+  //   // const geocodeField = configForParcelLayer.geocodeField;
+  //   const parcelLayers = Object.keys(this.config.parcels || {});
+  //   const otherParcelLayers = Object.keys(this.config.parcels || {});
+  //   otherParcelLayers.splice(otherParcelLayers.indexOf(activeParcelLayer), 1);
+  //   // console.log('didGeocode - activeParcelLayer:', activeParcelLayer, 'parcelLayers:', parcelLayers, 'otherParcelLayers:', otherParcelLayers);
+  //
+  //   // if it is a dor parcel query, and the geocode fails, coordinates can still be used
+  //   // to get dor parcels which are not in ais
+  //   // set coords to the ais coords OR the click if there is no ais result
+  //   let coords, lat, lng, latlng;
+  //   // if geocode fails
+  //   if (!feature) {
+  //     console.log('didGeocode - no geom');
+  //     if (lastSearchMethod === 'reverseGeocode') {
+  //       const clickCoords = this.store.state.clickCoords;
+  //       coords = [clickCoords.lng, clickCoords.lat];
+  //       [lng, lat] = coords;
+  //       latlng = L.latLng(lat, lng);
+  //     }
+  //   // if geocode succeeds
+  //   } else {
+  //     // console.log('didGeocode - GEOM', feature);
+  //     coords = feature.geometry.coordinates;
+  //     [lng, lat] = coords;
+  //     latlng = L.latLng(lat, lng);
+  //   }
+  //
+  //   // if (coords) {
+  //   //   const [lng, lat] = coords;
+  //   //   const latlng = L.latLng(lat, lng);
+  //   // }
+  //
+  //   // all of this happens whether geocode failed or succeeded
+  //   // search box or onload - get parcels by id
+  //   // (unless it fails and you are allowed to get them by LatLng on failure)
+  //   if (lastSearchMethod === 'geocode') {
+  //     if (feature) {
+  //       // console.log('didGeocode lastSearchMethod:', lastSearchMethod, '- attempting to get all parcel layers:', parcelLayers, ' by ID');
+  //       // loop through the parcels, and get them by their ids
+  //       for (let parcelLayer of parcelLayers) {
+  //         const configForParcelLayer = this.config.parcels[parcelLayer];
+  //         const parcelIdInGeocoder = configForParcelLayer.parcelIdInGeocoder
+  //         const parcelId = feature.properties[parcelIdInGeocoder];
+  //         if (parcelId && parcelId.length > 0) {
+  //           this.getParcelsById(parcelId, parcelLayer);
+  //         } else {
+  //           if (configForParcelLayer.getByLatLngIfIdFails) {
+  //             // console.log(parcelLayer, 'Id failed - had to get by LatLng')
+  //             console.log('in if lastSearchMethod === geocode, parcelLayer:', parcelLayer);
+  //             this.getParcelsByLatLng(latlng, parcelLayer);
+  //           }
+  //         }
+  //       }
+  //     }
+  //
+  //   // map-click - get pwd and dor parcels (whichever has not already been found) by latlng
+  //   // this is needed because it will not automatically get the dor parcels in case it does not find a pwd parcel
+  //   // and vice versa
+  //   } else if (lastSearchMethod === 'reverseGeocode') {
+  //     if (feature) {
+  //       // console.log('didGeocode lastSearchMethod:', lastSearchMethod, 'feature', feature, '- getting other parcel layers by id or latlng')
+  //       for (let otherParcelLayer of otherParcelLayers) {
+  //         const configForOtherParcelLayer = this.config.parcels[otherParcelLayer];
+  //         const parcelIdInGeocoder = configForOtherParcelLayer.parcelIdInGeocoder
+  //         const parcelId = feature.properties[parcelIdInGeocoder];
+  //         if (parcelId && parcelId.length > 0) {
+  //           this.getParcelsById(parcelId, otherParcelLayer);
+  //         } else {
+  //           if (configForOtherParcelLayer.getByLatLngIfIdFails) {
+  //             console.log('in if lastSearchMethod === reverseGeocode, otherParcelLayer:', otherParcelLayer, 'Id failed - had to get by LatLng')
+  //             this.getParcelsByLatLng(latlng, otherParcelLayer);
+  //           }
+  //         }
+  //       }
+  //     } else {
+  //       // console.log('didGeocode lastSearchMethod:', lastSearchMethod, 'NO feature', feature)
+  //       const geocodeFailAttemptParcel = configForActiveParcelLayer.geocodeFailAttemptParcel
+  //       if (geocodeFailAttemptParcel) {
+  //         // console.log('ran ais on a dor parcel and got no response - should try pwd parcel?', geocodeFailAttemptParcel);
+  //         const otherParcel = this.store.state.parcels[geocodeFailAttemptParcel];
+  //         // console.log('otherParcel:', otherParcel);
+  //         if (otherParcel) {
+  //           const configForOtherParcelLayer = this.config.parcels[geocodeFailAttemptParcel];
+  //           const geocodeField = configForOtherParcelLayer.geocodeField;
+  //           // console.log('running ais again on the pwd parcel', otherParcel.properties[geocodeField]);
+  //           this.store.commit('setLastSearchMethod', 'reverseGeocode-secondAttempt')
+  //           this.geocode(otherParcel.properties[geocodeField]);
+  //         }
+  //       }
+  //     }
+  //   }
+  //
+  //   // console.log('in didGeocode, activeTopicConfig:', this.activeTopicConfig());
+  //   const activeTopicConfig = this.activeTopicConfig();
+  //   // console.log('activeTopicConfig.zoomToShape:', activeTopicConfig.zoomToShape);
+  //   // const geocodeData = this.store.state.geocode.data || null;
+  //   // const geocodeProperties = geocodeData.properties || null;
+  //   // const newShape = geocodeProperties.opa_account_num || null;
+  //
+  //   // only recenter the map on geocode
+  //   if (lastSearchMethod === 'geocode' && this.store.state.geocode.status !== 'error') {
+  //     if (!activeTopicConfig.zoomToShape) {
+  //       // console.log('NO ZOOM TO SHAPE - NOW IT SHOULD NOT BE ZOOMING TO THE SHAPE ON GEOCODE');
+  //       if (this.store.state.map) {
+  //         let geocodeZoom = 19;
+  //         if (this.config.map.geocodeZoom) {
+  //           geocodeZoom = this.config.map.geocodeZoom;
+  //         }
+  //         this.store.commit('setMapCenter', coords);
+  //         this.store.commit('setMapZoom', geocodeZoom);
+  //       }
+  //     } else {
+  //       // console.log('ZOOM TO SHAPE - NOW IT SHOULD BE ZOOMING TO THE SHAPE ON GEOCODE');
+  //       // this.store.commit('setMapBoundsBasedOnShape', newShape);
+  //     }
+  //
+  //   } else if (activeTopicConfig.zoomToShape && lastSearchMethod === 'reverseGeocode' && this.store.state.geocode.status !== 'error') {
+  //     // console.log('ZOOM TO SHAPE - NOW IT SHOULD BE ZOOMING TO THE SHAPE ON REVERSE GEOCODE');
+  //     // this.store.commit('setMapBoundsBasedOnShape', newShape);
+  //   }
+  //
+  //   // reset data only when not a rev geocode second attempt
+  //   if (lastSearchMethod !== 'reverseGeocode-secondAttempt') {
+  //     this.resetData();
+  //   }
+  //
+  //   // as long as it is not an intersection, fetch new data
+  //   if (feature) {
+  //     if (feature.street_address) {
+  //       return;
+  //     } else if (feature.properties.street_address) {
+  //       this.fetchData();
+  //     }
+  //   } else {
+  //     this.fetchData();
+  //   }
+  // } // end didGeocode
 
   getParcelsById(id, parcelLayer) {
     // console.log('getParcelsById', parcelLayer);

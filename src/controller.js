@@ -8,6 +8,16 @@ import Vue from 'vue';
 import Router from './router';
 import DataManager from './data-manager';
 
+import {
+  GeocodeClient,
+  OwnerSearchClient,
+  HttpClient,
+  EsriClient
+} from './clients';
+
+
+console.log('controller.js is being read')
+
 class Controller {
   constructor(opts) {
     const store = this.store = opts.store;
@@ -24,6 +34,17 @@ class Controller {
     // create router
     opts.dataManager = dataManager;
     this.router = new Router(opts);
+
+    // create clients
+    this.clients = {};
+
+    // REVIEW do these need the store any more? or can they just pass the
+    // response back to this?
+    const clientOpts = { config, store, dataManager: this };
+    this.clients.geocode = new GeocodeClient(clientOpts);
+    this.clients.ownerSearch = new OwnerSearchClient(clientOpts);
+    this.clients.http = new HttpClient(clientOpts);
+    this.clients.esri = new EsriClient(clientOpts);
   }
 
   /*
@@ -31,6 +52,7 @@ class Controller {
   */
 
   appDidLoad() {
+    // console.log('pvd appDidLoad is running');
     // route once on load
     this.router.hashChanged();
   }
@@ -62,17 +84,13 @@ class Controller {
     }
   }
 
-  handleSearchFormSubmit(value, searchCategory) {
-    const input = value
-    console.log('phila-vue-datafetch controller.js, handleSearchFormSubmit is running, value:', value, 'searchCategory:', searchCategory, 'this:', this);
-
+  initializeStatuses(input, searchCategory) {
     this.store.commit('setGeocodeStatus', null);
     if (!searchCategory || searchCategory === 'address') {
       this.store.commit('setGeocodeInput', input);
     } else if (searchCategory === 'owner') {
       this.store.commit('setOwnerSearchInput', input);
     }
-    this.store.commit('setShouldShowAddressCandidateList', false);
     if (this.store.state.lastSearchMethod) {
       this.store.commit('setLastSearchMethod', 'geocode');
     }
@@ -108,21 +126,99 @@ class Controller {
       }
       // update state
       this.store.commit('setParcelData', payload);
+      console.log('initializeStatuses is running');
+    }
+  }
+
+  async handleSearchFormSubmit(value, searchCategory) {
+    const input = value;
+    console.log('phila-vue-datafetch controller.js, handleSearchFormSubmit is running, value:', value, 'searchCategory:', searchCategory, 'this:', this);
+
+    this.initializeStatuses(value, searchCategory);
+    console.log('after await initializeStatuses is running');
+
+    // TODO rename to aisResponse
+    let aisResponse = await this.clients.geocode.fetch(input)
+    console.log('after await aisResponse:', aisResponse);
+
+    // the old didGeocode() starts here
+    // TODO - a lifecycle hook that triggers this in mapboard
+    let geocodeZoom = 19;
+    if (this.config.map.geocodeZoom) {
+      geocodeZoom = this.config.map.geocodeZoom;
     }
 
-    // tell router
-    // if (this.config.router.enabled) {
-    console.log('phila-vue-datafetch controller.js, handleSearchFormSubmit is about to call routeToAddress, input:', input);
-    if (!searchCategory || searchCategory.toLowerCase() === 'address') {
-      this.router.routeToAddress(input, 'address');
-    } else if (searchCategory.toLowerCase() === 'owner') {
-      console.log('searchCategory is owner');
-      this.router.routeToOwner(input, 'owner');
-    } else if (searchCategory.toLowerCase() === 'keyword') {
-      console.log('searchCategory is keyword');
-      this.router.routeToKeyword(input, 'keyword');
+    console.log('DataManager.didGeocode:', aisResponse, 'geocodeZoom:', geocodeZoom);
+    this.router.didGeocode();
+    // TODO there actually is no way pvd runs all the way through without parcels
+    if (!this.config.parcels) {
+      if (this.store.state.map) {
+        this.store.commit('setMapCenter', aisResponse.geometry.coordinates);
+        this.store.commit('setMapZoom', geocodeZoom);
+      }
+      return
     }
-    // }
+    // end of part moving to mapboard
+
+    // TODO
+    const {activeParcelLayer, lastSearchMethod} = this.store.state;
+    const parcelLayers = Object.keys(this.config.parcels || {});
+
+    // if it is a dor parcel query, and the geocode fails, coordinates can still be used
+    // to get dor parcels which are not in ais
+    // set coords to the ais coords OR the click if there is no ais result
+
+    let coords = aisResponse.geometry.coordinates,
+        [lng, lat] = coords,
+        latlng = L.latLng(lat, lng);
+
+    // all of this happens whether geocode failed or succeeded
+    // search box or onload - get parcels by id
+    // (unless it fails and you are allowed to get them by LatLng on failure)
+    if (aisResponse) {
+      // console.log('didGeocode lastSearchMethod:', lastSearchMethod, '- attempting to get all parcel layers:', parcelLayers, ' by ID');
+      // loop through the parcels, and get them by their ids
+      for (let parcelLayer of parcelLayers) {
+        const configForParcelLayer = this.config.parcels[parcelLayer];
+        const parcelIdInGeocoder = configForParcelLayer.parcelIdInGeocoder
+        const parcelId = aisResponse.properties[parcelIdInGeocoder];
+        if (parcelId && parcelId.length > 0) {
+          this.dataManager.getParcelsById(parcelId, parcelLayer);
+        } else {
+          if (configForParcelLayer.getByLatLngIfIdFails) {
+            // console.log(parcelLayer, 'Id failed - had to get by LatLng')
+            console.log('in if lastSearchMethod === geocode, parcelLayer:', parcelLayer);
+            this.dataManager.getParcelsByLatLng(latlng, parcelLayer);
+          }
+        }
+      }
+    }
+
+    // console.log('in didGeocode, activeTopicConfig:', this.activeTopicConfig());
+    const activeTopicConfig = this.dataManager.activeTopicConfig();
+    // console.log('activeTopicConfig.zoomToShape:', activeTopicConfig.zoomToShape);
+    // const geocodeData = this.store.state.geocode.data || null;
+    // const geocodeProperties = geocodeData.properties || null;
+    // const newShape = geocodeProperties.opa_account_num || null;
+
+    // TODO - zoom stuff should move to mapboard and be based on lifecycle
+    // only recenter the map on geocode
+    if (lastSearchMethod === 'geocode' && this.store.state.geocode.status !== 'error') {
+      if (!activeTopicConfig.zoomToShape) {
+        // console.log('NO ZOOM TO SHAPE - NOW IT SHOULD NOT BE ZOOMING TO THE SHAPE ON GEOCODE');
+        if (this.store.state.map) {
+          let geocodeZoom = 19;
+          if (this.config.map.geocodeZoom) {
+            geocodeZoom = this.config.map.geocodeZoom;
+          }
+          this.store.commit('setMapCenter', coords);
+          this.store.commit('setMapZoom', geocodeZoom);
+        }
+      } else {
+        // console.log('ZOOM TO SHAPE - NOW IT SHOULD BE ZOOMING TO THE SHAPE ON GEOCODE');
+        // this.store.commit('setMapBoundsBasedOnShape', newShape);
+      }
+    }
   }
 
   handleMapClick(e) {

@@ -5,7 +5,7 @@ import BaseClient from './base-client';
 // the result in state.
 class GeocodeClient extends BaseClient {
   // fetch(input, category) {
-  fetch(input) {
+  async fetch(input) {
     console.log('geocode client fetch', input);
 
     const store = this.store;
@@ -22,7 +22,7 @@ class GeocodeClient extends BaseClient {
     const error = this.error.bind(this);
 
     // return a promise that can accept further chaining
-    return axios.get(url, { params })
+    return await axios.get(url, { params })
       .then(success)
       .catch(error);
   }

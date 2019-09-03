@@ -181,9 +181,11 @@ class Router {
       const prevAddress = this.getAddressFromState();
 
       // if the hash address is different, geocode
-      if (!prevAddress || nextAddress !== prevAddress) {
-        this.dataManager.geocode(nextAddress, searchCategory);
-      }
+      // if (!prevAddress || nextAddress !== prevAddress) {
+      //   this.dataManager.geocode(nextAddress, searchCategory);
+      // }
+
+      return prevAddress;
     }
   }
 
@@ -296,6 +298,7 @@ class Router {
   }
 
   // this is almost just the same thing as any of the routeTo... functions above
+  // TODO this could have a name that is more declarative like "changeURL"
   didGeocode() {
     const geocodeData = this.store.state.geocode.data;
 
@@ -310,6 +313,7 @@ class Router {
         address = geocodeData.properties.street_address;
       }
 
+      // TODO - datafetch should not know topics are a thing
       if (this.config.router.returnToDefaultTopicOnGeocode) {
         this.store.commit('setActiveTopic', this.config.defaultTopic);
       }

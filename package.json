@@ -1,5 +1,5 @@
 {
-  "name": "pvd",
+  "name": "@philly/pvd",
   "description": "the infrastructure needed for fetching data for a vue app",
   "version": "0.0.22",
   "author": "City of Philadelphia <maps@phila.gov>",
