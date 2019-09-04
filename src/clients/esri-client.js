@@ -14,7 +14,7 @@ import { query as Query } from 'esri-leaflet';
 import BaseClient from './base-client';
 
 class EsriClient extends BaseClient {
-  fetch(feature, dataSource, dataSourceKey) {
+  async fetch(feature, dataSource, dataSourceKey) {
     // console.log('esriclient fetch, feature:', feature, 'dataSource:', dataSource, 'dataSourceKey:', dataSourceKey);
 
     const url = dataSource.url;

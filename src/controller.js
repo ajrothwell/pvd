@@ -8,6 +8,8 @@ import Vue from 'vue';
 import Router from './router';
 import DataManager from './data-manager';
 
+import { query as Query } from 'esri-leaflet';
+
 import {
   GeocodeClient,
   OwnerSearchClient,
@@ -20,6 +22,7 @@ console.log('controller.js is being read')
 
 class Controller {
   constructor(opts) {
+    console.log('in Controller constructor, opts:', opts);
     const store = this.store = opts.store;
     const config = this.config = opts.config;
     // const eventBus = this.eventBus = opts.eventBus;
@@ -131,34 +134,16 @@ class Controller {
   }
 
   async handleSearchFormSubmit(value, searchCategory) {
-    const input = value;
     console.log('phila-vue-datafetch controller.js, handleSearchFormSubmit is running, value:', value, 'searchCategory:', searchCategory, 'this:', this);
 
     this.initializeStatuses(value, searchCategory);
     console.log('after await initializeStatuses is running');
 
     // TODO rename to aisResponse
-    let aisResponse = await this.clients.geocode.fetch(input)
+    let aisResponse = await this.clients.geocode.fetch(value)
     console.log('after await aisResponse:', aisResponse);
 
-    // the old didGeocode() starts here
-    // TODO - a lifecycle hook that triggers this in mapboard
-    let geocodeZoom = 19;
-    if (this.config.map.geocodeZoom) {
-      geocodeZoom = this.config.map.geocodeZoom;
-    }
-
-    console.log('DataManager.didGeocode:', aisResponse, 'geocodeZoom:', geocodeZoom);
     this.router.didGeocode();
-    // TODO there actually is no way pvd runs all the way through without parcels
-    if (!this.config.parcels) {
-      if (this.store.state.map) {
-        this.store.commit('setMapCenter', aisResponse.geometry.coordinates);
-        this.store.commit('setMapZoom', geocodeZoom);
-      }
-      return
-    }
-    // end of part moving to mapboard
 
     // TODO
     const {activeParcelLayer, lastSearchMethod} = this.store.state;
@@ -168,61 +153,38 @@ class Controller {
     // to get dor parcels which are not in ais
     // set coords to the ais coords OR the click if there is no ais result
 
-    let coords = aisResponse.geometry.coordinates,
-        [lng, lat] = coords,
-        latlng = L.latLng(lat, lng);
-
     // all of this happens whether geocode failed or succeeded
     // search box or onload - get parcels by id
     // (unless it fails and you are allowed to get them by LatLng on failure)
-    if (aisResponse) {
-      // console.log('didGeocode lastSearchMethod:', lastSearchMethod, '- attempting to get all parcel layers:', parcelLayers, ' by ID');
-      // loop through the parcels, and get them by their ids
-      for (let parcelLayer of parcelLayers) {
-        const configForParcelLayer = this.config.parcels[parcelLayer];
-        const parcelIdInGeocoder = configForParcelLayer.parcelIdInGeocoder
-        const parcelId = aisResponse.properties[parcelIdInGeocoder];
-        if (parcelId && parcelId.length > 0) {
-          this.dataManager.getParcelsById(parcelId, parcelLayer);
-        } else {
-          if (configForParcelLayer.getByLatLngIfIdFails) {
-            // console.log(parcelLayer, 'Id failed - had to get by LatLng')
-            console.log('in if lastSearchMethod === geocode, parcelLayer:', parcelLayer);
-            this.dataManager.getParcelsByLatLng(latlng, parcelLayer);
-          }
-        }
-      }
-    }
+    let theParcels = [];
+    let response;
+    if (!aisResponse) { return }
 
-    // console.log('in didGeocode, activeTopicConfig:', this.activeTopicConfig());
-    const activeTopicConfig = this.dataManager.activeTopicConfig();
-    // console.log('activeTopicConfig.zoomToShape:', activeTopicConfig.zoomToShape);
-    // const geocodeData = this.store.state.geocode.data || null;
-    // const geocodeProperties = geocodeData.properties || null;
-    // const newShape = geocodeProperties.opa_account_num || null;
-
-    // TODO - zoom stuff should move to mapboard and be based on lifecycle
-    // only recenter the map on geocode
-    if (lastSearchMethod === 'geocode' && this.store.state.geocode.status !== 'error') {
-      if (!activeTopicConfig.zoomToShape) {
-        // console.log('NO ZOOM TO SHAPE - NOW IT SHOULD NOT BE ZOOMING TO THE SHAPE ON GEOCODE');
-        if (this.store.state.map) {
-          let geocodeZoom = 19;
-          if (this.config.map.geocodeZoom) {
-            geocodeZoom = this.config.map.geocodeZoom;
-          }
-          this.store.commit('setMapCenter', coords);
-          this.store.commit('setMapZoom', geocodeZoom);
-        }
+    // loop through the parcels, and get them by their ids
+    for (let parcelLayer of parcelLayers) {
+      const configForParcelLayer = this.config.parcels[parcelLayer];
+      const parcelIdInGeocoder = configForParcelLayer.parcelIdInGeocoder
+      const parcelId = aisResponse.properties[parcelIdInGeocoder];
+      if (parcelId && parcelId.length > 0) {
+        response = await this.dataManager.getParcelsById(parcelId, parcelLayer);
+        theParcels.push(response);
+        // TODO - catch error before this if necessary
       } else {
-        // console.log('ZOOM TO SHAPE - NOW IT SHOULD BE ZOOMING TO THE SHAPE ON GEOCODE');
-        // this.store.commit('setMapBoundsBasedOnShape', newShape);
+        if (configForParcelLayer.getByLatLngIfIdFails) {
+          // console.log(parcelLayer, 'Id failed - had to get by LatLng')
+          console.log('in if lastSearchMethod === geocode, parcelLayer:', parcelLayer);
+          // TODO update getParcelByLAtLng to return parcels
+          this.dataManager.getParcelsByLatLng(latlng, parcelLayer);
+        }
       }
+      this.dataManager.processParcels(false, response, parcelLayer);
+      this.dataManager.resetData();
+      this.dataManager.fetchData();
     }
   }
 
-  handleMapClick(e) {
-    // console.log('handle map click', e, this);
+  async handleMapClick(e) {
+    console.log('handle map click', e, this);
 
     // TODO figure out why form submits via enter key are generating a map
     // click event and remove this
@@ -244,7 +206,46 @@ class Controller {
     // there is a callback after geocode to get dor parcels
     const activeParcelLayer = this.store.state.activeParcelLayer;
     // console.log('in handleMapClick, latlng:', latLng, 'activeParcelLayer:', activeParcelLayer);
-    this.dataManager.getParcelsByLatLng(latLng, activeParcelLayer);
+    // this.dataManager.getParcelsByLatLng(latLng, activeParcelLayer);
+    let response = await this.dataManager.getParcelsByLatLng(latLng, activeParcelLayer);
+    console.log('handleMapClick after getParcelsByLatLng, response:', response);
+    let processedParcel = this.dataManager.processParcels(false, response, activeParcelLayer);
+
+    if (!processedParcel) {
+      return;
+    }
+
+    const props = processedParcel.properties || {};
+    const geocodeField = this.config.parcels[activeParcelLayer].geocodeField;
+    const id = props[geocodeField];
+    // if (id) this.router.routeToAddress(id);
+
+    let aisResponse = await this.clients.geocode.fetch(id)
+    console.log('after await aisResponse:', aisResponse);
+
+    this.router.didGeocode();
+
+    // since we definitely have a new parcel, and will attempt to geocode it:
+    // 1. wipe out state data on other parcels
+    // 2. attempt to replace
+
+    // console.log('didGetParcels is wiping out the', otherParcelLayers, 'parcels in state');
+    const otherParcelLayers = Object.keys(this.config.parcels || {});
+    otherParcelLayers.splice(otherParcelLayers.indexOf(activeParcelLayer), 1);
+    for (let otherParcelLayer of otherParcelLayers) {
+      // console.log('for let otherParcelLayer of otherParcelLayers is running');
+      const configForOtherParcelLayer = this.config.parcels[otherParcelLayer];
+      const otherMultipleAllowed = configForOtherParcelLayer.multipleAllowed;
+
+      // is tbis line necessary?
+      this.dataManager.setParcelsInState(otherParcelLayer, otherMultipleAllowed, null, []);
+
+      let otherResponse = await this.dataManager.getParcelsByLatLng(latLng, otherParcelLayer, 'noFetch');
+      this.dataManager.processParcels(false, otherResponse, otherParcelLayer);
+    }
+
+    this.dataManager.resetData();
+    this.dataManager.fetchData();
   }
 
   // util for making sure topic headers are visible after clicking on one
@@ -305,13 +306,23 @@ class Controller {
     this.router.routeToAddress(address);
   }
 
-  resetGeocode() {
-    this.dataManager.resetGeocode();
-  }
+  // resetGeocode() {
+  //   this.dataManager.resetGeocode();
+  // }
 
   // routeToNoAddress() {
   //   this.router.routeToNoAddress();
   // }
 }
 
-export default Controller;
+function controllerMixin(Vue, opts) {
+  const controller = new Controller(opts);
+
+  Vue.mixin({
+    created() {
+      this.$controller = controller;
+    }
+  });
+}
+
+export default controllerMixin;

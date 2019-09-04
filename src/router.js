@@ -145,7 +145,9 @@ class Router {
     }
 
     if (nextAddress && nextAddress !== 'addr noaddress') {
-      this.routeToAddress(nextAddress);
+      console.log('router hashChanged calling controller.handleSearchFormSubmit')
+      // this.routeToAddress(nextAddress);
+      this.controller.handleSearchFormSubmit(nextAddress);
     }
 
     // if (nextKeyword) {
@@ -181,9 +183,9 @@ class Router {
       const prevAddress = this.getAddressFromState();
 
       // if the hash address is different, geocode
-      // if (!prevAddress || nextAddress !== prevAddress) {
-      //   this.dataManager.geocode(nextAddress, searchCategory);
-      // }
+      if (!prevAddress || nextAddress !== prevAddress) {
+        this.dataManager.geocode(nextAddress, searchCategory);
+      }
 
       return prevAddress;
     }

@@ -7,10 +7,7 @@ navigation events.
 */
 import * as L from 'leaflet';
 import { query as Query } from 'esri-leaflet';
-// import * as turf from '@turf/turf';
-import { point, polygon } from '@turf/helpers';
-import distance from '@turf/distance';
-import area from '@turf/area';
+import utils from './utils.js';
 import {
   GeocodeClient,
   OwnerSearchClient,
@@ -515,7 +512,7 @@ class DataManager {
     console.log('data-manager geocode is running, input:', input, 'category:', category);
     // if (category === 'address') {
       // const didGeocode = this.didGeocode.bind(this);
-      return this.clients.geocode.fetch(input)//.then(didGeocode);
+    return this.clients.geocode.fetch(input)//.then(didGeocode);
     // } else if (category === 'owner') {
     //   // console.log('category is owner');
     //   const didOwnerSearch = this.didOwnerSearch.bind(this);
@@ -717,68 +714,50 @@ class DataManager {
   //   }
   // } // end didGeocode
 
-  getParcelsById(id, parcelLayer) {
-    // console.log('getParcelsById', parcelLayer);
 
+  getParcelsById(id, parcelLayer) {
+    console.log('data-manager.js getParcelsById', parcelLayer, 'id:', id);
     const url = this.config.map.featureLayers[parcelLayer+'Parcels'].url;
     const configForParcelLayer = this.config.parcels[parcelLayer];
     const geocodeField = configForParcelLayer.geocodeField;
     const parcelQuery = Query({ url });
     parcelQuery.where(geocodeField + " = '" + id + "'");
-    // console.log('parcelQuery:', parcelQuery);
-    parcelQuery.run((function(error, featureCollection, response) {
-        // console.log('171111 getParcelsById parcelQuery ran, response:', response);
-        this.didGetParcels(error, featureCollection, response, parcelLayer);
-      }).bind(this)
-    )
+    return new Promise(function(resolve, reject) {
+      parcelQuery.run((function(error, featureCollection, response) {
+        if (error) reject(error);
+        else resolve(response);
+      }));
+    });
   }
 
   getParcelsByLatLng(latlng, parcelLayer, fetch) {
-    // console.log('getParcelsByLatLng, latlng:', latlng, 'parcelLayer:', parcelLayer, 'fetch:', fetch, 'this.config.map.featureLayers:', this.config.map.featureLayers);
+    console.log('getParcelsByLatLng, latlng:', latlng, 'parcelLayer:', parcelLayer, 'fetch:', fetch, 'this.config.map.featureLayers:', this.config.map.featureLayers);
     const latLng = L.latLng(latlng.lat, latlng.lng);
     const url = this.config.map.featureLayers[parcelLayer+'Parcels'].url;
     const parcelQuery = Query({ url });
     parcelQuery.contains(latLng);
-    const test = 5;
-    parcelQuery.run((function(error, featureCollection, response) {
-        this.didGetParcels(error, featureCollection, response, parcelLayer, fetch);
-      }).bind(this)
-    )
+    return new Promise(function(resolve, reject) {
+      parcelQuery.run((function(error, featureCollection, response) {
+        if (error) reject(error);
+        else resolve(response);
+      }));
+    });
   }
 
-  didGetParcels(error, featureCollection, response, parcelLayer, fetch) {
-    // console.log('180405 didGetParcels is running parcelLayer', parcelLayer, 'fetch', fetch, 'response', response);
-    const configForParcelLayer = this.config.parcels[parcelLayer];
-    const multipleAllowed = configForParcelLayer.multipleAllowed;
-    const geocodeField = configForParcelLayer.geocodeField;
-    const otherParcelLayers = Object.keys(this.config.parcels || {});
-    otherParcelLayers.splice(otherParcelLayers.indexOf(parcelLayer), 1);
-    const lastSearchMethod = this.store.state.lastSearchMethod;
-    const activeParcelLayer = this.store.state.activeParcelLayer;
-    // console.log('didGetParcels - parcelLayer:', parcelLayer, 'otherParcelLayers:', otherParcelLayers, 'configForParcelLayer:', configForParcelLayer);
+  processParcels(error, featureCollection, parcelLayer, fetch) {
+    console.log('data-manager.js processParcels is running parcelLayer', parcelLayer, 'fetch', fetch);
+    const multipleAllowed = this.config.parcels[parcelLayer].multipleAllowed;
 
-    if (error) {
-      // update state
-      if (configForParcelLayer.clearStateOnError) {
-      // this.store.commit('setParcelData', { parcelLayer, [] });
-      // this.store.commit('setParcelStatus', { parcelLayer }, 'error' });
-      }
-      return;
-    }
-
-    if (!featureCollection) {
+    if (error || !featureCollection || featureCollection.features.length === 0) {
       return;
     }
 
     const features = featureCollection.features;
 
-    if (features.length === 0) {
-      return;
-    }
-
-    const featuresSorted = this.sortDorParcelFeatures(features);
+    const featuresSorted = utils.sortDorParcelFeatures(features);
     let feature;
 
+    // this is for figuring out which parcel address to keep at the top
     if (!multipleAllowed) {
       feature = features[0];
     // dor
@@ -788,88 +767,74 @@ class DataManager {
 
     // use turf to get area and perimeter of all parcels returned
     for (let featureSorted of featuresSorted) {
-
-      let coords = featureSorted.geometry.coordinates;
-
-      // console.log('featureSorted:', featureSorted, 'coords.length:', coords.length);
-      if (coords.length > 1) {
-        let distances = [];
-        let areas = [];
-        for (let coordsSet of coords) {
-          // console.log('coordsSet:', coordsSet);
-          const turfPolygon = polygon(coordsSet);
-          distances.push(this.getDistances(coordsSet).reduce(function(acc, val) { return acc + val; }));
-          areas.push(area(turfPolygon) * 10.7639);
-        }
-        featureSorted.properties.TURF_PERIMETER = distances.reduce(function(acc, val) { return acc + val; });
-        featureSorted.properties.TURF_AREA = areas.reduce(function(acc, val) { return acc + val; });
-      } else {
-        // console.log('coords:', coords);
-        const turfPolygon = polygon(coords);
-        let distances = this.getDistances(coords);
-        featureSorted.properties.TURF_PERIMETER = distances.reduce(function(acc, val) { return acc + val; });
-        featureSorted.properties.TURF_AREA = area(turfPolygon) * 10.7639;
-      }
-      // console.log('after calcs, featureSorted:', featureSorted);
+      const geometry = utils.calculateAreaAndPerimeter(featureSorted);
+      featureSorted.properties.TURF_PERIMETER = geometry.perimeter;
+      featureSorted.properties.TURF_AREA = geometry.area;
     }
 
     // at this point there is definitely a feature or features - put it in state
     this.setParcelsInState(parcelLayer, multipleAllowed, feature, featuresSorted);
-
-    // shouldGeocode - true only if:
-    // 1. didGetParcels is running because the map was clicked (lastSearchMethod = reverseGeocode)
-    // 2. didGetParcels' parameter "parcelLayer" = activeParcelLayer
-    const shouldGeocode = (
-      activeParcelLayer === parcelLayer &&
-      lastSearchMethod === 'reverseGeocode'
-    );
-
-    // console.log('didGetParcels - shouldGeocode is', shouldGeocode);
-    if (shouldGeocode) {
-      // since we definitely have a new parcel, and will attempt to geocode it:
-      // 1. wipe out state data on other parcels
-      // 2. attempt to replace
-      // if (lastSearchMethod === 'reverseGeocode') { // || !configForParcelLayer.wipeOutOtherParcelsOnReverseGeocodeOnly) {
-      const clickCoords = this.store.state.clickCoords;
-      const coords = [clickCoords.lng, clickCoords.lat];
-      const [lng, lat] = coords;
-      const latlng = L.latLng(lat, lng);
-
-      // console.log('didGetParcels is wiping out the', otherParcelLayers, 'parcels in state');
-      for (let otherParcelLayer of otherParcelLayers) {
-        // console.log('for let otherParcelLayer of otherParcelLayers is running');
-        const configForOtherParcelLayer = this.config.parcels[otherParcelLayer];
-        const otherMultipleAllowed = configForOtherParcelLayer.multipleAllowed;
-        this.setParcelsInState(otherParcelLayer, otherMultipleAllowed, null, [])
-        this.getParcelsByLatLng(latlng, otherParcelLayer, 'noFetch')
-      }
-
-      // console.log('didGetParcels - shouldGeocode is running');
-      const props = feature.properties || {};
-      const id = props[geocodeField];
-      if (id) this.controller.router.routeToAddress(id);
-    } else {
-      // console.log('180405 data-manager.js didGetParcels - if shouldGeocode is NOT running');
-      // if (lastSearchMethod != 'reverseGeocode-secondAttempt') {
-      // if (fetch !== 'noFetch') {
-      if (fetch !== 'noFetch' && lastSearchMethod != 'reverseGeocode-secondAttempt') {
-        // console.log('180405 data-manager.js - didGetParcels - is calling fetchData() on feature w address', feature.properties.street_address);
-        this.fetchData();
-      }
-    }
+    return feature;
   }
 
-  getDistances(coords) {
-    let turfCoordinates = []
-    for (let coordinate of coords[0]) {
-      turfCoordinates.push(point(coordinate));
-    }
-    let distances = [];
-    for (let i=0; i<turfCoordinates.length - 1; i++) {
-      distances[i] = distance(turfCoordinates[i], turfCoordinates[i+1], {units: 'feet'});
-    }
-    return distances;
-  }
+  // TODO - rename and refactor into smaller tasks
+  // didGetParcels(error, featureCollection, parcelLayer, fetch) {
+  //
+  //   console.log('data-manager.js didGetParcels is running parcelLayer', parcelLayer, 'fetch', fetch);
+  //   const multipleAllowed = this.config.parcels[parcelLayer].multipleAllowed;
+  //   const geocodeField = this.config.parcels[parcelLayer].geocodeField;
+  //   const otherParcelLayers = Object.keys(this.config.parcels || {});
+  //   otherParcelLayers.splice(otherParcelLayers.indexOf(parcelLayer), 1);
+  //   const lastSearchMethod = this.store.state.lastSearchMethod;
+  //   const activeParcelLayer = this.store.state.activeParcelLayer;
+  //
+  //
+  //   // shouldGeocode - true only if:
+  //   // 1. didGetParcels is running because the map was clicked (lastSearchMethod = reverseGeocode)
+  //   // 2. didGetParcels' parameter "parcelLayer" = activeParcelLayer
+  //   const shouldGeocode = (
+  //     activeParcelLayer === parcelLayer &&
+  //     lastSearchMethod === 'reverseGeocode'
+  //   );
+  //
+  //   // console.log('didGetParcels - shouldGeocode is', shouldGeocode);
+  //   if (shouldGeocode) {
+  //     // since we definitely have a new parcel, and will attempt to geocode it:
+  //     // 1. wipe out state data on other parcels
+  //     // 2. attempt to replace
+  //     // if (lastSearchMethod === 'reverseGeocode') { // || !configForParcelLayer.wipeOutOtherParcelsOnReverseGeocodeOnly) {
+  //     const clickCoords = this.store.state.clickCoords;
+  //     const coords = [clickCoords.lng, clickCoords.lat];
+  //     const [lng, lat] = coords;
+  //     const latlng = L.latLng(lat, lng);
+  //
+  //     // console.log('didGetParcels is wiping out the', otherParcelLayers, 'parcels in state');
+  //     for (let otherParcelLayer of otherParcelLayers) {
+  //       // console.log('for let otherParcelLayer of otherParcelLayers is running');
+  //       const configForOtherParcelLayer = this.config.parcels[otherParcelLayer];
+  //       const otherMultipleAllowed = configForOtherParcelLayer.multipleAllowed;
+  //       this.setParcelsInState(otherParcelLayer, otherMultipleAllowed, null, [])
+  //       this.getParcelsByLatLng(latlng, otherParcelLayer, 'noFetch')
+  //     }
+  //
+  //     // console.log('didGetParcels - shouldGeocode is running');
+  //     const props = feature.properties || {};
+  //     const id = props[geocodeField];
+  //     if (id) this.controller.router.routeToAddress(id);
+  //
+  //
+  //
+  //
+  //   } else {
+  //     // console.log('180405 data-manager.js didGetParcels - if shouldGeocode is NOT running');
+  //     // if (lastSearchMethod != 'reverseGeocode-secondAttempt') {
+  //     // if (fetch !== 'noFetch') {
+  //     if (fetch !== 'noFetch' && lastSearchMethod != 'reverseGeocode-secondAttempt') {
+  //       console.log('180405 data-manager.js - didGetParcels - is calling fetchData() on feature w address', feature.properties.street_address);
+  //       this.fetchData();
+  //     }
+  //   }
+  // }
 
   setParcelsInState(parcelLayer, multipleAllowed, feature, featuresSorted) {
     let payload;
@@ -899,37 +864,7 @@ class DataManager {
     this.store.commit('setParcelData', payload);
   }
 
-  sortDorParcelFeatures(features) {
-    // map parcel status to a numeric priority
-    // (basically so remainders come before inactives)
-    const STATUS_PRIORITY = {
-      1: 1,
-      2: 3,
-      3: 2
-    }
 
-    // first sort by mapreg (descending)
-    features.sort((a, b) => {
-      const mapregA = a.properties.MAPREG;
-      const mapregB = b.properties.MAPREG;
-
-      if (mapregA < mapregB) return 1;
-      if (mapregA > mapregB) return -1;
-      return 0;
-    });
-
-    // then sort by status
-    features.sort((a, b) => {
-      const statusA = STATUS_PRIORITY[a.properties.STATUS];
-      const statusB = STATUS_PRIORITY[b.properties.STATUS];
-
-      if (statusA < statusB) return -1;
-      if (statusA > statusB) return 1;
-      return 0;
-    });
-
-    return features;
-  }
 }
 
 export default DataManager;
