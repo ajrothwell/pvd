@@ -220,12 +220,6 @@ const pvdStore = {
         state.sources[key].targets = {};
       },
       // this is the map center as an xy coordinate array (not latlng)
-      setMapCenter(state, payload) {
-        state.map.center = payload;
-      },
-      setMapZoom(state, payload) {
-        state.map.zoom = payload;
-      },
       setParcelData(state, payload) {
         // console.log('store setParcelData payload:', payload);
         const { parcelLayer, data, multipleAllowed, status, activeParcel, activeAddress, activeMapreg } = payload || {};

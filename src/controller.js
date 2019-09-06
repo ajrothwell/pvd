@@ -60,10 +60,6 @@ class Controller {
     this.router.hashChanged();
   }
 
-  test() {
-    console.log('controller test is firing');
-  }
-
   getMoreRecords(dataSource, highestPageRetrieved) {
     this.dataManager.fetchMoreData(dataSource, highestPageRetrieved);
   }
@@ -135,6 +131,7 @@ class Controller {
 
   async handleSearchFormSubmit(value, searchCategory) {
     console.log('phila-vue-datafetch controller.js, handleSearchFormSubmit is running, value:', value, 'searchCategory:', searchCategory, 'this:', this);
+    this.dataManager.resetData();
 
     this.initializeStatuses(value, searchCategory);
     console.log('after await initializeStatuses is running');
@@ -143,7 +140,7 @@ class Controller {
     let aisResponse = await this.clients.geocode.fetch(value)
     console.log('after await aisResponse:', aisResponse);
 
-    this.router.didGeocode();
+    this.router.setRouteByGeocode();
 
     // TODO
     const {activeParcelLayer, lastSearchMethod} = this.store.state;
@@ -178,7 +175,7 @@ class Controller {
         }
       }
       this.dataManager.processParcels(false, response, parcelLayer);
-      this.dataManager.resetData();
+      // this.dataManager.resetData();
       this.dataManager.fetchData();
     }
   }
@@ -192,7 +189,7 @@ class Controller {
       return;
     }
     this.store.commit('setLastSearchMethod', 'reverseGeocode');
-    this.store.commit('setClickCoords', null);
+    // this.store.commit('setClickCoords', null);
 
     // get parcels that intersect map click xy
     const latLng = e.latlng;
@@ -215,19 +212,24 @@ class Controller {
       return;
     }
 
+    this.dataManager.resetData();
+
     const props = processedParcel.properties || {};
     const geocodeField = this.config.parcels[activeParcelLayer].geocodeField;
     const id = props[geocodeField];
     // if (id) this.router.routeToAddress(id);
 
-    let aisResponse = await this.clients.geocode.fetch(id)
-    console.log('after await aisResponse:', aisResponse);
-
-    this.router.didGeocode();
-
     // since we definitely have a new parcel, and will attempt to geocode it:
     // 1. wipe out state data on other parcels
     // 2. attempt to replace
+
+    let aisResponse = await this.clients.geocode.fetch(id)
+    console.log('after await aisResponse:', aisResponse);
+
+    this.router.setRouteByGeocode();
+
+    // after getting the parcel of the activeParcelLayer, check if there are
+    // other parcel layers and if you clicked on anything in them
 
     // console.log('didGetParcels is wiping out the', otherParcelLayers, 'parcels in state');
     const otherParcelLayers = Object.keys(this.config.parcels || {});
@@ -244,34 +246,15 @@ class Controller {
       this.dataManager.processParcels(false, otherResponse, otherParcelLayer);
     }
 
-    this.dataManager.resetData();
+    // this.dataManager.resetData();
     this.dataManager.fetchData();
   }
 
-  // util for making sure topic headers are visible after clicking on one
-  // adapted from: https://stackoverflow.com/questions/123999/how-to-tell-if-a-dom-element-is-visible-in-the-current-viewport/7557433#7557433
-  // REVIEW this is returning true even when the topic header isn't visible,
-  // probably because of a timing issue. it's good enough without this check for
-  // now. commenting out.
-  // isElementInViewport(el) {
-  //   const rect = el.getBoundingClientRect();
-  //
-  //   // check visibility of each side of bounding rect
-  //   const topVisible = rect.top >= 0;
-  //   const leftVisible = rect.left >= 0;
-  //   const bottomVisible = rect.bottom <= (
-  //     window.innerHeight || document.documentElement.clientHeight
-  //   );
-  //   const rightVisible = rect.right <= (
-  //     window.innerWidth || document.documentElement.clientWidth
-  //   );
-  //
-  //   return (topVisible && leftVisible && bottomVisible && rightVisible);
-  // }
 
+  // TODO this may be entirely doing in mapboard, no reason for it here
+  // MAJOR QUESTION - should all routing not be in datafetch?
   handleTopicHeaderClick(topic) {
     // console.log('Controller.handleTopicHeaderClick', topic);
-
     this.router.routeToTopic(topic);//.then(function(targetExists) {
 
     /*
@@ -297,22 +280,10 @@ class Controller {
     });
   }
 
-  // handleRefinePanelClick(selectedServices) {
-  //   console.log('handleRefinePanelClick is running, selectedServices:', selectedServices);
-  //   this.router.routeToServices(selectedServices)
-  // }
-
   goToDefaultAddress(address) {
     this.router.routeToAddress(address);
   }
 
-  // resetGeocode() {
-  //   this.dataManager.resetGeocode();
-  // }
-
-  // routeToNoAddress() {
-  //   this.router.routeToNoAddress();
-  // }
 }
 
 function controllerMixin(Vue, opts) {

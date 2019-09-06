@@ -301,7 +301,8 @@ class Router {
 
   // this is almost just the same thing as any of the routeTo... functions above
   // TODO this could have a name that is more declarative like "changeURL"
-  didGeocode() {
+
+  setRouteByGeocode() {
     const geocodeData = this.store.state.geocode.data;
 
     // make hash if there is geocode data

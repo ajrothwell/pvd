@@ -354,55 +354,56 @@ class DataManager {
       }
     }
 
-    // this gets called when the current geocoded address is wiped out, such as
-    // when you click on the "Atlas" title and it navigates to an empty hash
-    resetGeocode() {
-      console.log('resetGeocode is running');
-      // reset geocode
-      this.store.commit('setGeocodeStatus', null);
-      this.store.commit('setGeocodeData', null);
-      this.store.commit('setGeocodeRelated', null);
-      this.store.commit('setGeocodeInput', null);
+  // this gets called when the current geocoded address is wiped out, such as
+  // when you click on the "Atlas" title and it navigates to an empty hash
+  resetGeocode() {
+    console.log('resetGeocode is running');
+    // reset geocode
+    this.store.commit('setGeocodeStatus', null);
+    this.store.commit('setGeocodeData', null);
+    this.store.commit('setGeocodeRelated', null);
+    this.store.commit('setGeocodeInput', null);
 
-      // reset parcels
-      if (this.config.parcels) {
-        this.store.commit('setParcelData', {
-          parcelLayer: 'dor',
-          multipleAllowed: true,
-          data: [],
-          status: null,
-          activeParcel: null,
-          activeAddress: null,
-          activeMapreg: null
-        });
-        this.store.commit('setParcelData', {
-          parcelLayer: 'pwd',
-          multipleAllowed: false,
-          data: null
-        });
-        this.store.commit('setActiveParcelLayer', 'pwd');
-      }
+    // reset parcels
+    if (this.config.parcels) {
+      this.store.commit('setParcelData', {
+        parcelLayer: 'dor',
+        multipleAllowed: true,
+        data: [],
+        status: null,
+        activeParcel: null,
+        activeAddress: null,
+        activeMapreg: null
+      });
+      this.store.commit('setParcelData', {
+        parcelLayer: 'pwd',
+        multipleAllowed: false,
+        data: null
+      });
+      this.store.commit('setActiveParcelLayer', 'pwd');
+    }
 
-      // reset other topic and map state
-      // if (this.config.topics.length) {
-      if (this.config.topics != undefined) {
-        if (this.config.defaultTopic || this.config.defaultTopic === null) {
-          this.store.commit('setActiveTopic', this.config.defaultTopic);
-        } else {
-          // console.log('about to setActiveTopic, config:', this.config.topics[0].key);
-          this.store.commit('setActiveTopic', this.config.topics[0].key);
-        }
-      }
-
-      if (this.store.state.map) {
-        this.store.commit('setBasemap', 'pwd');
-      }
-
-      // reset data sources
-      if (this.store.state.sources) {
-        this.resetData();
+    // reset other topic and map state
+    // if (this.config.topics.length) {
+    if (this.config.topics != undefined) {
+      if (this.config.defaultTopic || this.config.defaultTopic === null) {
+        this.store.commit('setActiveTopic', this.config.defaultTopic);
+      } else {
+        // console.log('about to setActiveTopic, config:', this.config.topics[0].key);
+        this.store.commit('setActiveTopic', this.config.topics[0].key);
       }
     }
+
+    // TODO - this has to come out
+    if (this.store.state.map) {
+      this.store.commit('setBasemap', 'pwd');
+    }
+
+    // reset data sources
+    if (this.store.state.sources) {
+      this.resetData();
+    }
+  }
 
   checkDataSourcesFetched(paths = []) {
     // console.log('check data sources fetched', paths);
@@ -487,26 +488,6 @@ class DataManager {
     return featuresWithIds;
   }
 
-  evaluateParams(feature, dataSource) {
-    const params = {};
-    const paramEntries = Object.entries(dataSource.options.params);
-    const state = this.store.state;
-
-    for (let [key, valOrGetter] of paramEntries) {
-      let val;
-
-      if (typeof valOrGetter === 'function') {
-        val = valOrGetter(feature, state);
-      } else {
-        val = valOrGetter;
-      }
-
-      params[key] = val;
-    }
-
-    return params;
-  }
-
   /* GEOCODING */
   geocode(input, category) {
     console.log('data-manager geocode is running, input:', input, 'category:', category);
@@ -555,6 +536,96 @@ class DataManager {
       this.store.commit('setOwnerSearchData', null);
       this.store.commit('setOwnerSearchInput', null);
     }
+  }
+
+  getParcelsById(id, parcelLayer) {
+    console.log('data-manager.js getParcelsById', parcelLayer, 'id:', id);
+    const url = this.config.map.featureLayers[parcelLayer+'Parcels'].url;
+    const configForParcelLayer = this.config.parcels[parcelLayer];
+    const geocodeField = configForParcelLayer.geocodeField;
+    const parcelQuery = Query({ url });
+    parcelQuery.where(geocodeField + " = '" + id + "'");
+    return new Promise(function(resolve, reject) {
+      parcelQuery.run((function(error, featureCollection, response) {
+        if (error) reject(error);
+        else resolve(response);
+      }));
+    });
+  }
+
+  getParcelsByLatLng(latlng, parcelLayer, fetch) {
+    console.log('getParcelsByLatLng, latlng:', latlng, 'parcelLayer:', parcelLayer, 'fetch:', fetch, 'this.config.map.featureLayers:', this.config.map.featureLayers);
+    const latLng = L.latLng(latlng.lat, latlng.lng);
+    const url = this.config.map.featureLayers[parcelLayer+'Parcels'].url;
+    const parcelQuery = Query({ url });
+    parcelQuery.contains(latLng);
+    return new Promise(function(resolve, reject) {
+      parcelQuery.run((function(error, featureCollection, response) {
+        if (error) reject(error);
+        else resolve(response);
+      }));
+    });
+  }
+
+  processParcels(error, featureCollection, parcelLayer, fetch) {
+    console.log('data-manager.js processParcels is running parcelLayer', parcelLayer, 'fetch', fetch);
+    const multipleAllowed = this.config.parcels[parcelLayer].multipleAllowed;
+
+    if (error || !featureCollection || featureCollection.features.length === 0) {
+      return;
+    }
+
+    const features = featureCollection.features;
+
+    const featuresSorted = utils.sortDorParcelFeatures(features);
+    let feature;
+
+    // this is for figuring out which parcel address to keep at the top
+    if (!multipleAllowed) {
+      feature = features[0];
+    // dor
+    } else {
+      feature = featuresSorted[0];
+    }
+
+    // use turf to get area and perimeter of all parcels returned
+    for (let featureSorted of featuresSorted) {
+      const geometry = utils.calculateAreaAndPerimeter(featureSorted);
+      featureSorted.properties.TURF_PERIMETER = geometry.perimeter;
+      featureSorted.properties.TURF_AREA = geometry.area;
+    }
+
+    // at this point there is definitely a feature or features - put it in state
+    this.setParcelsInState(parcelLayer, multipleAllowed, feature, featuresSorted);
+    return feature;
+  }
+
+  setParcelsInState(parcelLayer, multipleAllowed, feature, featuresSorted) {
+    let payload;
+    // pwd
+    if (!multipleAllowed) {
+      payload = {
+        parcelLayer,
+        multipleAllowed,
+        data: feature
+      }
+    // dor
+    } else {
+      payload = {
+        parcelLayer,
+        multipleAllowed,
+        data: featuresSorted,
+        status: 'success',
+        activeParcel: feature ? feature.id : null,
+        // TODO apply concatDorAddress in client config - this global is no
+        // longer available
+        // activeAddress: feature ? concatDorAddress(feature) : null,
+        activeAddress: null,
+        activeMapreg: feature ? feature.properties.MAPREG : null
+      }
+    }
+    // update state
+    this.store.commit('setParcelData', payload);
   }
 
   // didGeocode(feature) {
@@ -714,69 +785,6 @@ class DataManager {
   //   }
   // } // end didGeocode
 
-
-  getParcelsById(id, parcelLayer) {
-    console.log('data-manager.js getParcelsById', parcelLayer, 'id:', id);
-    const url = this.config.map.featureLayers[parcelLayer+'Parcels'].url;
-    const configForParcelLayer = this.config.parcels[parcelLayer];
-    const geocodeField = configForParcelLayer.geocodeField;
-    const parcelQuery = Query({ url });
-    parcelQuery.where(geocodeField + " = '" + id + "'");
-    return new Promise(function(resolve, reject) {
-      parcelQuery.run((function(error, featureCollection, response) {
-        if (error) reject(error);
-        else resolve(response);
-      }));
-    });
-  }
-
-  getParcelsByLatLng(latlng, parcelLayer, fetch) {
-    console.log('getParcelsByLatLng, latlng:', latlng, 'parcelLayer:', parcelLayer, 'fetch:', fetch, 'this.config.map.featureLayers:', this.config.map.featureLayers);
-    const latLng = L.latLng(latlng.lat, latlng.lng);
-    const url = this.config.map.featureLayers[parcelLayer+'Parcels'].url;
-    const parcelQuery = Query({ url });
-    parcelQuery.contains(latLng);
-    return new Promise(function(resolve, reject) {
-      parcelQuery.run((function(error, featureCollection, response) {
-        if (error) reject(error);
-        else resolve(response);
-      }));
-    });
-  }
-
-  processParcels(error, featureCollection, parcelLayer, fetch) {
-    console.log('data-manager.js processParcels is running parcelLayer', parcelLayer, 'fetch', fetch);
-    const multipleAllowed = this.config.parcels[parcelLayer].multipleAllowed;
-
-    if (error || !featureCollection || featureCollection.features.length === 0) {
-      return;
-    }
-
-    const features = featureCollection.features;
-
-    const featuresSorted = utils.sortDorParcelFeatures(features);
-    let feature;
-
-    // this is for figuring out which parcel address to keep at the top
-    if (!multipleAllowed) {
-      feature = features[0];
-    // dor
-    } else {
-      feature = featuresSorted[0];
-    }
-
-    // use turf to get area and perimeter of all parcels returned
-    for (let featureSorted of featuresSorted) {
-      const geometry = utils.calculateAreaAndPerimeter(featureSorted);
-      featureSorted.properties.TURF_PERIMETER = geometry.perimeter;
-      featureSorted.properties.TURF_AREA = geometry.area;
-    }
-
-    // at this point there is definitely a feature or features - put it in state
-    this.setParcelsInState(parcelLayer, multipleAllowed, feature, featuresSorted);
-    return feature;
-  }
-
   // TODO - rename and refactor into smaller tasks
   // didGetParcels(error, featureCollection, parcelLayer, fetch) {
   //
@@ -836,34 +844,25 @@ class DataManager {
   //   }
   // }
 
-  setParcelsInState(parcelLayer, multipleAllowed, feature, featuresSorted) {
-    let payload;
-    // pwd
-    if (!multipleAllowed) {
-      payload = {
-        parcelLayer,
-        multipleAllowed,
-        data: feature
-      }
-    // dor
-    } else {
-      payload = {
-        parcelLayer,
-        multipleAllowed,
-        data: featuresSorted,
-        status: 'success',
-        activeParcel: feature ? feature.id : null,
-        // TODO apply concatDorAddress in client config - this global is no
-        // longer available
-        // activeAddress: feature ? concatDorAddress(feature) : null,
-        activeAddress: null,
-        activeMapreg: feature ? feature.properties.MAPREG : null
-      }
-    }
-    // update state
-    this.store.commit('setParcelData', payload);
-  }
-
+  // evaluateParams(feature, dataSource) {
+  //   const params = {};
+  //   const paramEntries = Object.entries(dataSource.options.params);
+  //   const state = this.store.state;
+  //
+  //   for (let [key, valOrGetter] of paramEntries) {
+  //     let val;
+  //
+  //     if (typeof valOrGetter === 'function') {
+  //       val = valOrGetter(feature, state);
+  //     } else {
+  //       val = valOrGetter;
+  //     }
+  //
+  //     params[key] = val;
+  //   }
+  //
+  //   return params;
+  // }
 
 }
 
