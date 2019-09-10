@@ -25,14 +25,12 @@ const store = new Vuex.Store({
   mutations: mergeStore.mutations,
 });
 
-const opts = {
-  store,
-  config
-}
+const opts = { store, config }
 
 const controller = new Controller(opts);
 
 test('first test', async () => {
-  await controller.handleSearchFormSubmit('1234 mkt');
-  // expect(this.state.data[]).toEqual()
+  await controller.handleSearchFormSubmit('720 tasker');
+  console.log('store.state.geocode.data.properties.street_address', store.state.geocode.data.properties.street_address);
+  expect(store.state.geocode.data.properties.street_address).toEqual('720 TASKER ST');
 });

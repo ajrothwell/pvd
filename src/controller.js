@@ -17,8 +17,7 @@ import {
   EsriClient
 } from './clients';
 
-
-console.log('controller.js is being read')
+// console.log('controller.js is being read')
 
 class Controller {
   constructor(opts) {
@@ -125,20 +124,21 @@ class Controller {
       }
       // update state
       this.store.commit('setParcelData', payload);
-      console.log('initializeStatuses is running');
+      // console.log('initializeStatuses is running');
     }
   }
 
   async handleSearchFormSubmit(value, searchCategory) {
+    console.log('phila-vue-datafetch controller.js, handleSearchFormSubmit is running, value:', value, 'searchCategory:', searchCategory);
     // console.log('phila-vue-datafetch controller.js, handleSearchFormSubmit is running, value:', value, 'searchCategory:', searchCategory, 'this:', this);
     this.dataManager.resetData();
 
     this.initializeStatuses(value, searchCategory);
-    console.log('after await initializeStatuses is running');
+    // console.log('after await initializeStatuses is running');
 
     // TODO rename to aisResponse
     let aisResponse = await this.clients.geocode.fetch(value)
-    console.log('after await aisResponse:', aisResponse);
+    console.log('after await aisResponse:', aisResponse)//, 'this.clients:', this.clients);
 
     this.router.setRouteByGeocode();
 
@@ -157,8 +157,11 @@ class Controller {
     let response;
     if (!aisResponse) { return }
 
+    console.log('right before loop');
+
     // loop through the parcels, and get them by their ids
     for (let parcelLayer of parcelLayers) {
+      console.log('in loop, parcelLayer:', parcelLayer);
       const configForParcelLayer = this.config.parcels[parcelLayer];
       const parcelIdInGeocoder = configForParcelLayer.parcelIdInGeocoder
       const parcelId = aisResponse.properties[parcelIdInGeocoder];
@@ -178,6 +181,7 @@ class Controller {
       // this.dataManager.resetData();
       this.dataManager.fetchData();
     }
+    console.log('end of handleSearchFormSubmit');
   }
 
   async handleMapClick(e) {
@@ -296,4 +300,6 @@ function controllerMixin(Vue, opts) {
   });
 }
 
-export { Controller, controllerMixin }
+// export { Controller, controllerMixin }
+export default controllerMixin
+export { Controller }

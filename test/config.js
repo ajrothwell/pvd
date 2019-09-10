@@ -1,14 +1,32 @@
 
 const config = {
+  router: {
+    enabled: false,
+  },
+  map: {
+    featureLayers: {
+      dorParcels: {
+        url: 'https://services.arcgis.com/fLeGjb7u4uXqeF9q/ArcGIS/rest/services/DOR_Parcel/FeatureServer/0',
+      },
+      pwdParcels: {
+        url: 'https://services.arcgis.com/fLeGjb7u4uXqeF9q/ArcGIS/rest/services/PWD_PARCELS/FeatureServer/0',
+      },
+    },
+  },
   geocoder: {
     url: function (input) {
       var inputEncoded = encodeURIComponent(input);
-      return 'https://api.phila.gov/ais/v1/search/' + inputEncoded;
+      // return 'http://api.phila.gov/ais/v1/search/943%20sigel?gatekeeperKey=82fe014b6575b8c38b44235580bc8b11&include_units=true%27';
+      return 'http://api.phila.gov/ais/v1/search/' + inputEncoded;
     },
     params: {
       gatekeeperKey: '82fe014b6575b8c38b44235580bc8b11',
       include_units: true,
     },
+    // proxy: {
+    //   host: 'proxy.phila.gov',
+    //   port: 8080,
+    // },
   },
   parcels: {
     pwd: {

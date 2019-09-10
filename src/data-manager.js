@@ -56,6 +56,7 @@ class DataManager {
   /* DATA FETCHING METHODS */
 
   fetchMoreData(dataSourceKey, highestPageRetrieved) {
+    console.log('data-manager.js fetchMoreData is running');
     const feature = this.store.state.geocode.data;
     const dataSource = this.config.dataSources[dataSourceKey];
 
@@ -284,6 +285,7 @@ class DataManager {
   }
 
   didFetchData(key, status, data, targetId) {
+    console.log('data-manager.js didFetchData is running');
 
     const dataOrNull = status === 'error' ? null : data;
     let stateData = dataOrNull;
@@ -327,7 +329,7 @@ class DataManager {
   }
 
   resetData() {
-    console.log('resetData is running')
+    // console.log('resetData is running')
       const dataSources = this.config.dataSources || {};
 
       for (let dataSourceKey of Object.keys(dataSources)) {
