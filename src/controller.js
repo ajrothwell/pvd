@@ -22,7 +22,7 @@ console.log('controller.js is being read')
 
 class Controller {
   constructor(opts) {
-    console.log('in Controller constructor, opts:', opts);
+    // console.log('in Controller constructor, opts:', opts);
     const store = this.store = opts.store;
     const config = this.config = opts.config;
     // const eventBus = this.eventBus = opts.eventBus;
@@ -130,7 +130,7 @@ class Controller {
   }
 
   async handleSearchFormSubmit(value, searchCategory) {
-    console.log('phila-vue-datafetch controller.js, handleSearchFormSubmit is running, value:', value, 'searchCategory:', searchCategory, 'this:', this);
+    // console.log('phila-vue-datafetch controller.js, handleSearchFormSubmit is running, value:', value, 'searchCategory:', searchCategory, 'this:', this);
     this.dataManager.resetData();
 
     this.initializeStatuses(value, searchCategory);
@@ -296,4 +296,4 @@ function controllerMixin(Vue, opts) {
   });
 }
 
-export default controllerMixin;
+export { Controller, controllerMixin }
