@@ -33,7 +33,7 @@ const controller = new Controller(opts);
 
 test('first test', async () => {
   await Promise.all([
-    controller.handleSearchFormSubmit('720 tasker');
+    controller.handleSearchFormSubmit('720 tasker'),
     timeout(4000)
   ]);
   console.log('store.state.geocode.data.properties.street_address', store.state.geocode.data.properties.street_address);
