@@ -174,7 +174,11 @@ class Controller {
           // console.log(parcelLayer, 'Id failed - had to get by LatLng')
           console.log('in if lastSearchMethod === geocode, parcelLayer:', parcelLayer);
           // TODO update getParcelByLAtLng to return parcels
-          this.dataManager.getParcelsByLatLng(latlng, parcelLayer);
+          const coords = aisResponse.geometry.coordinates;
+          let [lng, lat] = coords;
+          const latlng = L.latLng(lat, lng);
+          response = await this.dataManager.getParcelsByLatLng(latlng, parcelLayer);
+          theParcels.push(response);
         }
       }
       this.dataManager.processParcels(false, response, parcelLayer);
