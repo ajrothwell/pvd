@@ -37,8 +37,10 @@ export default {
   },
 
   getDistances(coords) {
+    // console.log('getDistances, coords:', coords)
     let turfCoordinates = []
     for (let coordinate of coords[0]) {
+      // console.log('in getDistances, coordinate:', coordinate);
       turfCoordinates.push(point(coordinate));
     }
     let distances = [];
@@ -46,7 +48,21 @@ export default {
       distances[i] = distance(turfCoordinates[i], turfCoordinates[i+1], {units: 'feet'});
     }
     return distances;
-  },
+  }
+
+  getMultiPolyDistances(coords) {
+    // console.log('getMultiPolyDistances, coords:', coords)
+    let turfCoordinates = []
+    for (let coordinate of coords) {
+      console.log('in getMultiPolyDistances, coordinate:', coordinate);
+      turfCoordinates.push(point(coordinate));
+    }
+    let distances = [];
+    for (let i=0; i<turfCoordinates.length - 1; i++) {
+      distances[i] = distance(turfCoordinates[i], turfCoordinates[i+1], {units: 'feet'});
+    }
+    return distances;
+  }
 
   calculateAreaAndPerimeter(feature) {
     let coords = feature.geometry.coordinates;
@@ -57,9 +73,18 @@ export default {
       let areas = [];
       for (let coordsSet of coords) {
         // console.log('coordsSet:', coordsSet);
-        const turfPolygon = polygon(coordsSet);
-        distances.push(this.getDistances(coordsSet).reduce(function(acc, val) { return acc + val; }));
-        areas.push(area(turfPolygon) * 10.7639);
+        if (coordsSet.length > 2) {
+            // console.log('in multiPolygon loop');
+            const turfPolygon = multiPolygon(coordsSet);
+            distances.push(this.getMultiPolyDistances(coordsSet).reduce(function(acc, val) { return acc + val; }));
+            areas.push(area(turfPolygon) * 10.7639);
+            // console.log('areas:', areas);
+          } else {
+            // console.log('in polygon loop');
+            const turfPolygon = polygon(coordsSet);
+            distances.push(this.getDistances(coordsSet).reduce(function(acc, val) { return acc + val; }));
+            areas.push(area(turfPolygon) * 10.7639);
+          }
       }
       return { perimeter: distances.reduce(function(acc, val) { return acc + val; }),
                area: areas.reduce(function(acc, val) { return acc + val; })

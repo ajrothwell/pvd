@@ -546,6 +546,24 @@ class DataManager {
     const configForParcelLayer = this.config.parcels[parcelLayer];
     const geocodeField = configForParcelLayer.geocodeField;
     const parcelQuery = Query({ url });
+
+    if (id.includes('|')) {
+      const idSplit = id.split('|');
+      let queryString = geocodeField + " = '";
+      let i;
+      for (i=0; i<idSplit.length; i++) {
+        queryString = queryString + idSplit[i] + "'";
+        if (i < idSplit.length - 1) {
+          queryString = queryString + " or " + geocodeField + " = '";
+        }
+      }
+      console.log('there is a pipe, queryString:', queryString);
+      parcelQuery.where(queryString);
+    } else {
+      console.log('there is not a pipe');
+      parcelQuery.where(geocodeField + " = '" + id + "'");
+    }
+
     parcelQuery.where(geocodeField + " = '" + id + "'");
     return new Promise(function(resolve, reject) {
       parcelQuery.run((function(error, featureCollection, response) {
