@@ -102,5 +102,24 @@ describe('handleSearchFormSubmit', () => {
     expect(store.state.sources.opa.data.depth).toEqual('223.75');
     expect(store.state.sources.opa.data.zoning).toEqual('ICMX ');
   });
-  
+});
+
+describe('handleMapClick', () => {
+  describe('pwd activeParcel', () => {
+    beforeEach(() => {
+      // store.commit('setActiveParcelLayer', 'pwd');
+    });
+    
+    test('Click on random house', async () => {
+      store.commit('setActiveParcelLayer', 'pwd');
+      store.commit('setLastSearchMethod', 'reverseGeocode');
+      // jest.setTimeout(15000);
+      await Promise.all([
+        controller.handleMapClick({ originalEvent: { keycode: 0 },  latlng: { lng: -75.168225, lat: 39.942696 }}),
+        timeout(3000) // Add a timeout to allow fetchData to complete
+      ]);
+      
+      expect(store.state.geocode.data.properties.street_address).toEqual('707 S MOLE ST');
+    });
+  });
 });
