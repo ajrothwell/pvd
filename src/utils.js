@@ -1,4 +1,4 @@
-import { point, polygon } from '@turf/helpers';
+import { point, polygon, multiPolygon } from '@turf/helpers';
 import distance from '@turf/distance';
 import area from '@turf/area';
 
@@ -67,7 +67,7 @@ export default {
   calculateAreaAndPerimeter(feature) {
     let coords = feature.geometry.coordinates;
 
-    // console.log('feature:', feature, 'coords.length:', coords.length);
+    console.log('utils.calculateAreaAndPerimeter, feature:', feature, 'coords.length:', coords.length);
     if (coords.length > 1) {
       let distances = [];
       let areas = [];

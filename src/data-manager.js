@@ -588,7 +588,7 @@ class DataManager {
   }
 
   processParcels(error, featureCollection, parcelLayer, fetch) {
-    console.log('data-manager.js processParcels is running parcelLayer', parcelLayer, 'fetch', fetch);
+    console.log('data-manager.js processParcels is running parcelLayer', parcelLayer, 'fetch', fetch, 'featureCollection:', featureCollection);
     const multipleAllowed = this.config.parcels[parcelLayer].multipleAllowed;
 
     if (error || !featureCollection || featureCollection.features.length === 0) {
@@ -600,6 +600,8 @@ class DataManager {
     const featuresSorted = utils.sortDorParcelFeatures(features);
     let feature;
 
+    console.log('processParcels still running 1');
+
     // this is for figuring out which parcel address to keep at the top
     if (!multipleAllowed) {
       feature = features[0];
@@ -607,13 +609,19 @@ class DataManager {
     } else {
       feature = featuresSorted[0];
     }
+    
+    console.log('processParcels still running 2');
+
 
     // use turf to get area and perimeter of all parcels returned
     for (let featureSorted of featuresSorted) {
       const geometry = utils.calculateAreaAndPerimeter(featureSorted);
+      console.log('in loop, got geometry:', geometry);
       featureSorted.properties.TURF_PERIMETER = geometry.perimeter;
       featureSorted.properties.TURF_AREA = geometry.area;
     }
+
+    console.log('processParcels still running 3');
 
     // at this point there is definitely a feature or features - put it in state
     this.setParcelsInState(parcelLayer, multipleAllowed, feature, featuresSorted);
