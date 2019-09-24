@@ -48,7 +48,7 @@ export default {
       distances[i] = distance(turfCoordinates[i], turfCoordinates[i+1], {units: 'feet'});
     }
     return distances;
-  }
+  },
 
   getMultiPolyDistances(coords) {
     // console.log('getMultiPolyDistances, coords:', coords)
@@ -62,7 +62,7 @@ export default {
       distances[i] = distance(turfCoordinates[i], turfCoordinates[i+1], {units: 'feet'});
     }
     return distances;
-  }
+  },
 
   calculateAreaAndPerimeter(feature) {
     let coords = feature.geometry.coordinates;
