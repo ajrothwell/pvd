@@ -34,6 +34,7 @@ class Router {
 
   activeParcelLayer() {
     if (this.config.map) {
+      // TODO - why is there this double-check if there is a map?
       return this.activeTopicConfig().parcels || this.config.map.defaultBasemap;
     } else {
       return this.activeTopicConfig().parcels;
@@ -254,9 +255,9 @@ class Router {
   //   }
   // }
 
-  configForBasemap(key) {
-    return this.config.map.basemaps[key];
-  }
+  // configForBasemap(key) {
+  //   return this.config.map.basemaps[key];
+  // }
 
   routeToModal(selectedModal) {
     console.log('routeToModal is running, selectedModal:', selectedModal);
@@ -272,22 +273,6 @@ class Router {
     if (!prevTopic || prevTopic !== nextTopic) {
       this.store.commit('setActiveTopic', nextTopic);
       this.store.commit('setActiveParcelLayer', this.activeParcelLayer());
-
-      if (this.store.state.map) {
-        const prevBasemap = this.store.state.map.basemap || null;
-        const nextTopicConfig = this.config.topics.filter(topic => {
-          return topic.key === nextTopic;
-        })[0] || {};
-        const nextBasemap = nextTopicConfig.parcels;
-        const nextImagery = nextTopicConfig.imagery;
-        if (prevBasemap !== nextBasemap) {
-          this.store.commit('setBasemap', nextTopicConfig.parcels);
-        }
-        if (nextImagery) {
-          this.store.commit('setShouldShowImagery', true);
-          this.store.commit('setImagery', nextImagery);
-        }
-      }
     }
 
     if (!this.silent) {

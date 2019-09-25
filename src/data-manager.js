@@ -285,7 +285,7 @@ class DataManager {
   }
 
   didFetchData(key, status, data, targetId) {
-    console.log('data-manager.js didFetchData is running');
+    // console.log('data-manager.js didFetchData is running');
 
     const dataOrNull = status === 'error' ? null : data;
     let stateData = dataOrNull;

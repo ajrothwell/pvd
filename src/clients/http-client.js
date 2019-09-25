@@ -27,7 +27,7 @@ class HttpClient extends BaseClient {
 
   fetch(feature, dataSource, dataSourceKey, targetIdFn) {
     let params = this.evaluateParams(feature, dataSource);
-    console.log('http-client fetch, feature:', feature, 'dataSource:', dataSource, 'dataSourceKey:', dataSourceKey, 'targetIdFn:', targetIdFn, 'params:', params);
+    // console.log('http-client fetch, feature:', feature, 'dataSource:', dataSource, 'dataSourceKey:', dataSourceKey, 'targetIdFn:', targetIdFn, 'params:', params);
     let url = dataSource.url;
     const options = dataSource.options;
     const urlAddition = params.urlAddition;
@@ -35,7 +35,7 @@ class HttpClient extends BaseClient {
       url += encodeURIComponent(urlAddition);
       // url += encodeURIComponent(urlAddition.properties.street_address);
     }
-    console.log('http-client.js url', url, 'params:', params);
+    // console.log('http-client.js url', url, 'params:', params);
     // console.log('http-client fetch, feature:', feature, 'dataSource:', dataSource, 'dataSourceKey:', dataSourceKey, 'targetIdFn:', targetIdFn, 'params:', params);
     const successFn = options.success;
 
@@ -67,7 +67,7 @@ class HttpClient extends BaseClient {
   }
 
   fetchMore(feature, dataSource, dataSourceKey, highestPageRetrieved) {
-    console.log('http-client.js fetchMore is running');
+    // console.log('http-client.js fetchMore is running');
     let params = this.evaluateParams(feature, dataSource);
     params.page = highestPageRetrieved + 1;
     let url = dataSource.url;
@@ -104,7 +104,7 @@ class HttpClient extends BaseClient {
     // returns a sql statement
     const dateMinNum = options.dateMinNum || null;
     const dateMinType = options.dateMinType || null;
-    console.log('dateMinType:', dateMinType);
+    // console.log('dateMinType:', dateMinType);
     const dateField = options.dateField || null;
     const successFn = options.success;
     const distances = options.distances || 250;
