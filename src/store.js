@@ -258,15 +258,6 @@ const pvdStore = {
       setOwnerSearchInput(state, payload) {
         state.ownerSearch.input = payload;
       },
-      setBasemap(state, payload) {
-        state.map.basemap = payload;
-      },
-      setImagery(state, payload) {
-        state.map.imagery = payload;
-      },
-      setShouldShowImagery(state, payload) {
-        state.map.shouldShowImagery = payload;
-      },
       setShouldShowAddressCandidateList(state, payload) {
         state.shouldShowAddressCandidateList = payload;
       },
