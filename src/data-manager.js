@@ -396,11 +396,6 @@ class DataManager {
       }
     }
 
-    // TODO - this has to come out
-    if (this.store.state.map) {
-      this.store.commit('setBasemap', 'pwd');
-    }
-
     // reset data sources
     if (this.store.state.sources) {
       this.resetData();
@@ -609,7 +604,7 @@ class DataManager {
     } else {
       feature = featuresSorted[0];
     }
-    
+
     console.log('processParcels still running 2');
 
 

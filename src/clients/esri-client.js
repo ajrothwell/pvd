@@ -122,7 +122,7 @@ class EsriClient extends BaseClient {
 
       // get nearby features using buffer
       const buffer = L.polygon(latLngCoords);
-      const map = this.dataManager.store.state.map.map;
+      // const map = this.dataManager.store.state.map.map;
 
       // DEBUG
       // buffer.addTo(map);
