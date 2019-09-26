@@ -33,12 +33,7 @@ class Router {
   }
 
   activeParcelLayer() {
-    if (this.config.map) {
-      // TODO - why is there this double-check if there is a map?
-      return this.activeTopicConfig().parcels || this.config.map.defaultBasemap;
-    } else {
-      return this.activeTopicConfig().parcels;
-    }
+    return this.activeTopicConfig().parcels || Object.keys(this.config.parcels)[0];
   }
 
   makeHash(firstRouteParameter, secondRouteParameter) {
@@ -185,6 +180,7 @@ class Router {
 
       // if the hash address is different, geocode
       if (!prevAddress || nextAddress !== prevAddress) {
+        // should this call the geocode client directly?
         this.dataManager.geocode(nextAddress, searchCategory);
       }
 
@@ -201,6 +197,7 @@ class Router {
 
   routeToOwner(nextOwner, searchCategory) {
     if (nextOwner) {
+      // should this call the geocode client directly?
       this.dataManager.geocode(nextOwner, searchCategory);
     }
   }
@@ -253,10 +250,6 @@ class Router {
   //     const lastHistoryState = this.history.state;
   //     this.history.replaceState(lastHistoryState, null, nextHash);
   //   }
-  // }
-
-  // configForBasemap(key) {
-  //   return this.config.map.basemaps[key];
   // }
 
   routeToModal(selectedModal) {

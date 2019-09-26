@@ -39,19 +39,19 @@ class DataManager {
   // REVIEW maybe the getXXXParcelsById methods should just take an argument
   // activeParcelLayer? that's the only reason these are in here.
 
-  activeTopicConfig() {
-    const key = this.store.state.activeTopic;
-    let config;
-
-    // if no active topic, return null
-    if (key) {
-      config = this.config.topics.filter((topic) => {
-        return topic.key === key;
-      })[0];
-    }
-
-    return config || {};
-  }
+  // activeTopicConfig() {
+  //   const key = this.store.state.activeTopic;
+  //   let config;
+  //
+  //   // if no active topic, return null
+  //   if (key) {
+  //     config = this.config.topics.filter((topic) => {
+  //       return topic.key === key;
+  //     })[0];
+  //   }
+  //
+  //   return config || {};
+  // }
 
   /* DATA FETCHING METHODS */
 
@@ -330,31 +330,31 @@ class DataManager {
 
   resetData() {
     // console.log('resetData is running')
-      const dataSources = this.config.dataSources || {};
+    const dataSources = this.config.dataSources || {};
 
-      for (let dataSourceKey of Object.keys(dataSources)) {
-        const dataSource = dataSources[dataSourceKey];
-        const targetsDef = dataSource.targets;
+    for (let dataSourceKey of Object.keys(dataSources)) {
+      const dataSource = dataSources[dataSourceKey];
+      const targetsDef = dataSource.targets;
 
-        if (dataSource.resettable !== false) {
-          // null out existing data in state
-          if (targetsDef) {
-            this.store.commit('clearSourceTargets', {
-              key: dataSourceKey
-            });
-          } else {
-            this.store.commit('setSourceData', {
-              key: dataSourceKey,
-              data: null
-            })
-            this.store.commit('setSourceStatus', {
-              key: dataSourceKey,
-              status: null
-            })
-          }
+      if (dataSource.resettable !== false) {
+        // null out existing data in state
+        if (targetsDef) {
+          this.store.commit('clearSourceTargets', {
+            key: dataSourceKey
+          });
+        } else {
+          this.store.commit('setSourceData', {
+            key: dataSourceKey,
+            data: null
+          })
+          this.store.commit('setSourceStatus', {
+            key: dataSourceKey,
+            status: null
+          })
         }
       }
     }
+  }
 
   // this gets called when the current geocoded address is wiped out, such as
   // when you click on the "Atlas" title and it navigates to an empty hash
@@ -404,9 +404,7 @@ class DataManager {
 
   checkDataSourcesFetched(paths = []) {
     // console.log('check data sources fetched', paths);
-
     const state = this.store.state;
-
     return paths.every(path => {
       // deps can be deep keys, e.g. `dor.parcels`. split on periods to get
       // a sequence of keys.
@@ -552,10 +550,10 @@ class DataManager {
           queryString = queryString + " or " + geocodeField + " = '";
         }
       }
-      console.log('there is a pipe, queryString:', queryString);
+      // console.log('there is a pipe, queryString:', queryString);
       parcelQuery.where(queryString);
     } else {
-      console.log('there is not a pipe');
+      // console.log('there is not a pipe');
       parcelQuery.where(geocodeField + " = '" + id + "'");
     }
 
@@ -595,8 +593,6 @@ class DataManager {
     const featuresSorted = utils.sortDorParcelFeatures(features);
     let feature;
 
-    console.log('processParcels still running 1');
-
     // this is for figuring out which parcel address to keep at the top
     if (!multipleAllowed) {
       feature = features[0];
@@ -605,18 +601,12 @@ class DataManager {
       feature = featuresSorted[0];
     }
 
-    console.log('processParcels still running 2');
-
-
     // use turf to get area and perimeter of all parcels returned
     for (let featureSorted of featuresSorted) {
       const geometry = utils.calculateAreaAndPerimeter(featureSorted);
-      console.log('in loop, got geometry:', geometry);
       featureSorted.properties.TURF_PERIMETER = geometry.perimeter;
       featureSorted.properties.TURF_AREA = geometry.area;
     }
-
-    console.log('processParcels still running 3');
 
     // at this point there is definitely a feature or features - put it in state
     this.setParcelsInState(parcelLayer, multipleAllowed, feature, featuresSorted);

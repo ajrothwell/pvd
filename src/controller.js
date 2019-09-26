@@ -60,6 +60,7 @@ class Controller {
   }
 
   getMoreRecords(dataSource, highestPageRetrieved) {
+    console.log('controller.js getMoreRecords is running');
     this.dataManager.fetchMoreData(dataSource, highestPageRetrieved);
   }
 
@@ -197,7 +198,6 @@ class Controller {
       return;
     }
     this.store.commit('setLastSearchMethod', 'reverseGeocode');
-    // this.store.commit('setClickCoords', null);
 
     // get parcels that intersect map click xy
     const latLng = e.latlng;
@@ -259,15 +259,16 @@ class Controller {
   }
 
 
-  // TODO this may be entirely doing in mapboard, no reason for it here
   // MAJOR QUESTION - should all routing not be in datafetch?
+
+  // TODO this may be entirely doing in mapboard, no reason for it here
+  // in pvc Topic.vue there is also a function called handleTopicHeaderClick
+  // it calls this, so that this handles topic routing
   handleTopicHeaderClick(topic) {
-    // console.log('Controller.handleTopicHeaderClick', topic);
+    console.log('Controller.handleTopicHeaderClick', topic);
     this.router.routeToTopic(topic);//.then(function(targetExists) {
 
-    /*
-    scroll to top of topic header
-    */
+    // scroll to top of topic header
 
     // get element
     const els = document.querySelectorAll(`[data-topic-key='${topic}']`);
