@@ -64,24 +64,24 @@ class Controller {
     this.dataManager.fetchMoreData(dataSource, highestPageRetrieved);
   }
 
-  filterInputSubmit(value, process, searchCategory) {
-    console.log('controller filterInputSubmit is running, value:', value, 'process:', process);
-    if (process === 'mapboard') {
-      this.handleSearchFormSubmit(value);
-    } else {
-      this.handleConfigurableInputSubmit(value, searchCategory);
-    }
-  }
-
-  handleConfigurableInputSubmit(value, searchCategory) {
-    console.log('controller handleConfigurableInputSubmit is running, value:', value, 'searchCategory:', searchCategory);
-    if (searchCategory === 'address') {
-      this.handleSearchFormSubmit(value, searchCategory);
-    } else if (searchCategory === 'owner') {
-      console.log('searchCategory is owner');
-      this.handleSearchFormSubmit(value, searchCategory);
-    }
-  }
+  // filterInputSubmit(value, process, searchCategory) {
+  //   console.log('controller filterInputSubmit is running, value:', value, 'process:', process);
+  //   if (process === 'mapboard') {
+  //     this.handleSearchFormSubmit(value);
+  //   } else {
+  //     this.handleConfigurableInputSubmit(value, searchCategory);
+  //   }
+  // }
+  //
+  // handleConfigurableInputSubmit(value, searchCategory) {
+  //   console.log('controller handleConfigurableInputSubmit is running, value:', value, 'searchCategory:', searchCategory);
+  //   if (searchCategory === 'address') {
+  //     this.handleSearchFormSubmit(value, searchCategory);
+  //   } else if (searchCategory === 'owner') {
+  //     console.log('searchCategory is owner');
+  //     this.handleSearchFormSubmit(value, searchCategory);
+  //   }
+  // }
 
   initializeStatuses(input, searchCategory) {
     this.store.commit('setGeocodeStatus', null);
@@ -263,9 +263,11 @@ class Controller {
 
   // TODO this may be entirely doing in mapboard, no reason for it here
   // in pvc Topic.vue there is also a function called handleTopicHeaderClick
+  // it emits an event that mapboard's TopicPanel.vue sees
+  // it also has a function called handleTopicHeaderClick
   // it calls this, so that this handles topic routing
   handleTopicHeaderClick(topic) {
-    console.log('Controller.handleTopicHeaderClick', topic);
+    // console.log('Controller.handleTopicHeaderClick', topic);
     this.router.routeToTopic(topic);//.then(function(targetExists) {
 
     // scroll to top of topic header

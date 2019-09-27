@@ -278,13 +278,13 @@ class Router {
   }
 
   // this is almost just the same thing as any of the routeTo... functions above
-  // TODO this could have a name that is more declarative like "changeURL"
+  // TODO this could have a name that is more declarative like "changeURL" (used to be called "didGeocode")
 
   setRouteByGeocode() {
     const geocodeData = this.store.state.geocode.data;
 
     // make hash if there is geocode data
-    // console.log('Router.didGeocode running - geocodeData:', geocodeData);
+    console.log('router setRouteByGeocode is running - geocodeData:', geocodeData);
     if (geocodeData) {
       let address;
 
@@ -313,10 +313,9 @@ class Router {
         // address = 'addr ' + address;
         if (topic) {
           nextHash = this.makeHash(address, topic);
+        } else {
+          nextHash = this.makeHash(address, '');
         }
-        // else {
-        //   nextHash = this.makeHash(address, selectedServices);
-        // }
         // console.log('nextHistoryState', nextHistoryState, 'nextHash', nextHash);
         this.history.pushState(nextHistoryState, null, nextHash);
       }
