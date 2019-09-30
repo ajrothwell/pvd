@@ -24,7 +24,6 @@ class Controller {
     // console.log('in Controller constructor, opts:', opts);
     const store = this.store = opts.store;
     const config = this.config = opts.config;
-    // const eventBus = this.eventBus = opts.eventBus;
     this.history = window.history;
 
     // the router and data manager need a ref to the controller

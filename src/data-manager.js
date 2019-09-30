@@ -132,12 +132,6 @@ class DataManager {
       geocodeObj = this.store.state.geocode.data;
     }
 
-    // we always need a good geocode before we can get data, so return
-    // if we don't have one yet.
-    // if (!geocodeObj) {
-    //   // console.log('fetch data but no geocode yet, returning');
-    //   return;
-    // }
     let dataSources = {};
     if (doPins) {
       console.log('fetchData is running on pins')
