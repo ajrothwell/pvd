@@ -24,6 +24,7 @@ class Controller {
     // console.log('in Controller constructor, opts:', opts);
     const store = this.store = opts.store;
     const config = this.config = opts.config;
+    const vueRouter = this.vueRouter = opts.router;
     this.history = window.history;
 
     // the router and data manager need a ref to the controller
@@ -92,9 +93,9 @@ class Controller {
     if (this.store.state.lastSearchMethod) {
       this.store.commit('setLastSearchMethod', 'geocode');
     }
-    if (this.store.state.clickCoords) {
-      this.store.commit('setClickCoords', null);
-    }
+    // if (this.store.state.clickCoords) {
+    //   this.store.commit('setClickCoords', null);
+    // }
 
     // clear out state
     const parcelLayers = Object.keys(this.config.parcels || {});
@@ -200,7 +201,7 @@ class Controller {
 
     // get parcels that intersect map click xy
     const latLng = e.latlng;
-    this.store.commit('setClickCoords', latLng);
+    // this.store.commit('setClickCoords', latLng);
     this.store.commit('setGeocodeInput', null);
 
     // if click is on a topic with pwd parcels, you do not want to find dor parcels unless the

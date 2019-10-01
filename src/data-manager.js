@@ -19,6 +19,7 @@ class DataManager {
   constructor(opts) {
     const store = this.store = opts.store;
     const config = this.config = opts.config;
+    const vueRouter = this.vueRouter = opts.router;
     // this.eventBus = opts.eventBus;
     this.controller = opts.controller;
 
