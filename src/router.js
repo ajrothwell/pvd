@@ -1,15 +1,12 @@
 import { parse as parseUrl } from 'url';
-// import vueRouter from './router0.js';
 
 class Router {
   constructor(opts) {
-    console.log('Router constructor, opts:', opts);
     const config = this.config = opts.config;
     this.store = opts.store;
     this.controller = opts.controller;
     this.dataManager = opts.dataManager;
     this.history = window.history;
-    this.vueRouter = opts.router;
 
     // check if the router should be silent (i.e. not update the url or listen
     // for hash changes)
@@ -40,7 +37,7 @@ class Router {
   }
 
   makeHash(firstRouteParameter, secondRouteParameter) {
-    console.log('make hash, firstRouteParameter:', firstRouteParameter, 'secondRouteParameter:', secondRouteParameter, 'this.vueRouter:', this.vueRouter);
+    console.log('make hash, firstRouteParameter:', firstRouteParameter, 'secondRouteParameter:', secondRouteParameter);
 
     // must have an firstRouteParameter
     if (!firstRouteParameter || firstRouteParameter.length === 0) {

@@ -6,7 +6,7 @@ const initialState = {
   // load.
   activeTopic: '',
   activeParcelLayer: '',
-  // clickCoords: null,
+  clickCoords: null,
   // should addresscandidate be here if neither pvm or pvc were included?
   shouldShowAddressCandidateList: false,
   // the ais feature
@@ -134,9 +134,9 @@ const pvdStore = {
       setActiveTopic(state, payload) {
         state.activeTopic = payload;
       },
-      // setClickCoords(state, payload) {
-      //   state.clickCoords = payload;
-      // },
+      setClickCoords(state, payload) {
+        state.clickCoords = payload;
+      },
       setSourceStatus(state, payload) {
         // console.log('setSourceStatus is running, payload:', payload, 'state', state);
         const key = payload.key;
